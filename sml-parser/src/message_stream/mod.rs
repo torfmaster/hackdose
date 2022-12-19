@@ -10,11 +10,16 @@ use crate::{
 };
 
 /// Read SML message stream from a reader
+///
 /// ```
 /// use std::io::Cursor;
+/// use hackdose_sml_parser::message_stream::sml_message_stream;
 ///
-/// let cursor = Cursor::new(vec![0x01, 0x02, 0x03]);
-/// let message_stream = sml_message_stream(cursor);
+/// #[tokio::main()]
+/// async fn main() {
+///     let cursor = Cursor::new(vec![0x01, 0x02, 0x03]);
+///     let message_stream = sml_message_stream(cursor);
+/// }
 /// ```
 pub fn sml_message_stream(
     mut stream: impl AsyncRead + Unpin + Send + 'static,
