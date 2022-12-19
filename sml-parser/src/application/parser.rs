@@ -27,232 +27,263 @@ pub fn parse_message(input: &[u8]) -> ParseResult<SmlMessages> {
 peg::parser! {
     grammar sml_parser<'a>() for [u8] {
 
-        pub (crate) rule sml_body() -> SmlMessages
-            = a:(sml_message_envelope())* { SmlMessages { messages: a } }
+        pub (crate) rule sml_body() -> SmlMessages =
+            a: (sml_message_envelope())*
+            {
+                SmlMessages {
+                    messages: a
+                }
+            }
 
-        pub (crate) rule sml_messages() -> SmlMessages
-            = header() a:(sml_message_envelope())* footer() { SmlMessages { messages: a } }
+        pub (crate) rule sml_messages() -> SmlMessages =
+            header()
+            a: (sml_message_envelope())*
+            footer()
+            {
+                SmlMessages {
+                    messages: a
+                }
+            }
 
-        rule header() -> ()
-            = ([0x1b] [0x1b] [0x1b] [0x1b] [0x01] [0x01] [0x01] [0x01])
+        rule header() -> () =
+            [0x1b] [0x1b] [0x1b] [0x1b] [0x01] [0x01] [0x01] [0x01]
 
-        rule footer() -> ()
-            = ([0x1b] [0x1b] [0x1b] [0x1b] [0x1a] [0..=255]*<3,3>)
+        rule footer() -> () =
+            [0x1b] [0x1b] [0x1b] [0x1b] [0x1a] [0..=255]*<3>
 
-        rule sml_message_envelope() -> SmlMessageEnvelope
-            = [0x76] transaction_id() group_no() abort_on_error() a:sml_message_body() crc() end_of_message() { a }
+        rule sml_message_envelope() -> SmlMessageEnvelope =
+            [0x76]
+            transaction_id()
+            group_no()
+            abort_on_error()
+            a:sml_message_body()
+            crc()
+            end_of_message()
+            { a }
 
-        rule end_of_message() = [0x00]
         rule crc() = [0x63] any_number() any_number()
 
-        rule sml_message_body() -> SmlMessageEnvelope
-            = get_open_response() / get_list_response() / get_close_response() // and more types
+        rule end_of_message() = [0x00]
 
-        rule get_open_response() -> SmlMessageEnvelope
-            = ([0x72] [0x63] [0x01] [0x01]) [0x76] a: get_open_response_content() { SmlMessageEnvelope::GetOpenResponse(a)}
+        rule sml_message_body() -> SmlMessageEnvelope =
+            get_open_response() /
+            get_list_response() /
+            get_close_response() // and more types
 
-        rule get_open_response_content() -> GetOpenResponseBody
-            = [0x01] [0x01] req_file_id:string() server_id:string() [0x01] [0x01] { GetOpenResponseBody { server_id: server_id, req_file_id: req_file_id }}
+        rule get_open_response() -> SmlMessageEnvelope =
+            [0x72] [0x63] [0x01] [0x01] [0x76]
+            a: get_open_response_content()
+            {
+                SmlMessageEnvelope::GetOpenResponse(a)
+            }
 
-        rule get_close_response() -> SmlMessageEnvelope
-            = ([0x72] [0x63] [0x02] [0x01]) [0x71] get_close_response_content() { SmlMessageEnvelope::GetCloseResponse}
+        rule get_open_response_content() -> GetOpenResponseBody =
+            [0x01] [0x01]
+            req_file_id: string()
+            server_id: string()
+            [0x01] [0x01]
+            {
+                GetOpenResponseBody {
+                    server_id,
+                    req_file_id
+                }
+            }
 
-        rule get_close_response_content()
-            = [0x01]
+        rule get_close_response() -> SmlMessageEnvelope =
+            [0x72] [0x63] [0x02] [0x01] [0x71]
+            get_close_response_content()
+            {
+                SmlMessageEnvelope::GetCloseResponse
+            }
 
-        rule get_list_response() -> SmlMessageEnvelope
-            = ([0x72] [0x63] [0x07] [0x01]) [0x77] a: get_list_response_content() { SmlMessageEnvelope::GetListResponse(a)}
+        rule get_close_response_content() = [0x01]
 
-        rule list_signature()
-            = [0x01]
+        rule get_list_response() -> SmlMessageEnvelope =
+            [0x72] [0x63] [0x07] [0x01] [0x77]
+            a: get_list_response_content()
+            {
+                SmlMessageEnvelope::GetListResponse(a)
+            }
 
-        rule act_gateway_time()
-            = ([0x01]*<0,1>)
+        rule list_signature() = [0x01]
 
-        rule get_list_response_content() -> GetListResponseBody
-            = [0x01] server_id:string() list_name:string() obscure_prefix_in_get_list_response() value_list:list_sml_value() list_signature() act_gateway_time() { GetListResponseBody { server_id: server_id, list_name: list_name, value_list: value_list }}
+        rule act_gateway_time() = [0x01]*<0,1>
 
-        rule obscure_prefix_in_get_list_response()
-            = [0x72] [0x62] [0..=255] [0x65] [0..=255] [0..=255] [0..=255] [0..=255]
+        rule get_list_response_content() -> GetListResponseBody =
+            [0x01]
+            server_id: string()
+            list_name: string()
+            obscure_prefix_in_get_list_response()
+            value_list: list_sml_value() list_signature() act_gateway_time()
+            {
+                GetListResponseBody {
+                    server_id,
+                    list_name,
+                    value_list
+                }
+            }
 
-        rule list_sml_value1() -> Vec<SmlListEntry> = [0x71] n:(single_sml_value())*<1,1> { n }
-        rule list_sml_value2() -> Vec<SmlListEntry> = [0x72] n:(single_sml_value())*<2,2> { n }
-        rule list_sml_value3() -> Vec<SmlListEntry> = [0x73] n:(single_sml_value())*<3,3> { n }
-        rule list_sml_value4() -> Vec<SmlListEntry> = [0x74] n:(single_sml_value())*<4,4> { n }
-        rule list_sml_value5() -> Vec<SmlListEntry> = [0x75] n:(single_sml_value())*<5,5> { n }
-        rule list_sml_value6() -> Vec<SmlListEntry> = [0x76] n:(single_sml_value())*<6,6> { n }
-        rule list_sml_value7() -> Vec<SmlListEntry> = [0x77] n:(single_sml_value())*<7,7> { n }
-        rule list_sml_value8() -> Vec<SmlListEntry> = [0x78] n:(single_sml_value())*<8,8> { n }
-        rule list_sml_value9() -> Vec<SmlListEntry> = [0x79] n:(single_sml_value())*<9,9> { n }
-        rule list_sml_value10() -> Vec<SmlListEntry> = [0x7a] n:(single_sml_value())*<10,10> { n }
-        rule list_sml_value11() -> Vec<SmlListEntry> = [0x7b] n:(single_sml_value())*<11,11> { n }
-        rule list_sml_value12() -> Vec<SmlListEntry> = [0x7c] n:(single_sml_value())*<12,12> { n }
-        rule list_sml_value13() -> Vec<SmlListEntry> = [0x7d] n:(single_sml_value())*<13,13> { n }
-        rule list_sml_value14() -> Vec<SmlListEntry> = [0x7e] n:(single_sml_value())*<14,14> { n }
-        rule list_sml_value15() -> Vec<SmlListEntry> = [0x7f] n:(single_sml_value())*<15,15> { n }
-        rule list_sml_value() -> Vec<SmlListEntry> = list_sml_value1()/list_sml_value1()/list_sml_value2()/list_sml_value3()/list_sml_value4()/list_sml_value5()/list_sml_value6()/list_sml_value7()/list_sml_value8()/list_sml_value9()/list_sml_value10()/list_sml_value11()/list_sml_value12()/list_sml_value13()/list_sml_value14()/list_sml_value15()
-        rule single_sml_value() -> SmlListEntry
-            = [0x77] obj_name: string() status: optional_unsigned_32() val_time: string() unit: (optional_unsigned_8()) scaler: scaler() value: value() sml_value_signature() { SmlListEntry { object_name: obj_name, status: status, value_time: val_time, unit, scaler: scaler, value: value }}
+        rule obscure_prefix_in_get_list_response() =
+            [0x72] [0x62] [0..=255] [0x65] [0..=255] [0..=255] [0..=255] [0..=255]
 
-        rule scaler() -> Option<i8>
-            = optional_signed_8()
+        rule list_sml_value() -> Vec<SmlListEntry> =
+            prefix: [0x71..=0x7f]
+            value: single_sml_value() * <{
+                let length = prefix - 0x70;
+                length as usize
+            }>
+            { value }
 
-        rule value() -> AnyValue
-            = arbitrary()
+        rule single_sml_value() -> SmlListEntry =
+            [0x77]
+            object_name: string()
+            status: optional_unsigned_32()
+            value_time: string()
+            unit: (optional_unsigned_8())
+            scaler: scaler()
+            value: value() sml_value_signature()
+            {
+                SmlListEntry {
+                    object_name, status, value_time, unit, scaler, value
+                }
+            }
 
-        rule sml_value_signature()
-            = [0x01]
+        rule scaler() -> Option<i8> = optional_signed_8()
+
+        rule value() -> AnyValue = arbitrary()
+
+        rule sml_value_signature() = [0x01]
 
         rule arbitrary() -> AnyValue =
-            (v:string() { AnyValue::String(v)}) / (v:unsigned_16() { AnyValue::Unsigned(v as usize)}) / (v:signed_16() { AnyValue::Signed(v as isize)}) /
-            (v:signed_64() { AnyValue::Signed(v as isize)}) / (v:signed_32() { AnyValue::Signed(v as isize)}) / (v:unsigned_32() { AnyValue::Unsigned(v as usize)})
+            (v:string() { AnyValue::String(v) }) /
+            (v:unsigned_16() { AnyValue::Unsigned(v as usize) }) /
+            (v:signed_16() { AnyValue::Signed(v as isize) }) /
+            (v:signed_64() { AnyValue::Signed(v as isize) }) /
+            (v:signed_32() { AnyValue::Signed(v as isize) }) /
+            (v:unsigned_32() { AnyValue::Unsigned(v as usize) })
 
-        rule transaction_id()
-            =(string4())
+        rule transaction_id() -> Vec<u8> =
+            string_len_4()
 
-        rule group_no()
-            =([0x62] any_number())
+        rule group_no() =
+            [0x62] any_number()
 
-        rule abort_on_error()
-            =([0x62] [0x00])
+        rule abort_on_error() =
+            [0x62] [0x00]
 
-        rule message_checksum()
-            = (any_number() any_number() any_number())
+        rule message_checksum() =
+            any_number() any_number() any_number()
 
-        rule any_number() -> u8
-            = ([0..=255])
+        rule any_number() -> u8 =
+            [0..=255]
 
-        rule unsigned_16() -> u16
-            = [0x63] n:$([0..=255]*<2,2>) { {
-                    let mut rdr = Cursor::new(n);
-                    let res = rdr.read_u16::<BigEndian>().unwrap();
-                    res
-                }
+        rule unsigned_16() -> u16 =
+            [0x63]
+            n: $([0..=255]*<2,2>)
+            {
+                let mut rdr = Cursor::new(n);
+                rdr.read_u16::<BigEndian>().unwrap()
             }
 
-        rule unsigned_32() -> u32
-            = [0x65] n:$([0..=255]*<4,4>) { {
-                    let mut rdr = Cursor::new(n);
-                    let res = rdr.read_u32::<BigEndian>().unwrap();
-                    res
-                }
+        rule unsigned_32() -> u32 =
+            [0x65]
+            n: $([0..=255]*<4,4>)
+            {
+                let mut rdr = Cursor::new(n);
+                rdr.read_u32::<BigEndian>().unwrap()
             }
 
-        rule signed_32() -> i32
-            = [0x55] n:$([0..=255]*<4,4>) { {
-                    let mut rdr = Cursor::new(n);
-                    let res = rdr.read_i32::<BigEndian>().unwrap();
-                    res
-                }
+        rule signed_32() -> i32 =
+            [0x55]
+            n: $([0..=255]*<4,4>)
+            {
+                let mut rdr = Cursor::new(n);
+                rdr.read_i32::<BigEndian>().unwrap()
             }
 
-        rule unsigned_64() -> u64
-            = [0x69] n:$([0..=255]*<8,8>) { {
-                    let mut rdr = Cursor::new(n);
-                    let res = rdr.read_u64::<BigEndian>().unwrap();
-                    res
-                }
+        rule unsigned_64() -> u64 =
+            [0x69]
+            n: $([0..=255]*<8,8>)
+            {
+                let mut rdr = Cursor::new(n);
+                rdr.read_u64::<BigEndian>().unwrap()
             }
 
 
-        rule signed_64() -> i64
-            = [0x59] n:$([0..=255]*<8,8>) { {
-                    let mut rdr = Cursor::new(n);
-                    let res = rdr.read_i64::<BigEndian>().unwrap();
-                    res
-                }
+        rule signed_64() -> i64 =
+            [0x59]
+            n: $([0..=255]*<8,8>)
+            {
+                let mut rdr = Cursor::new(n);
+                rdr.read_i64::<BigEndian>().unwrap()
             }
 
-        pub rule signed_16() -> i16
-            = [0x53] n:$([0..=255]*<2,2>) { {
-                    let mut rdr = Cursor::new(n);
-                    let res = rdr.read_i16::<BigEndian>().unwrap();
-                    res
-                }
+        pub rule signed_16() -> i16 =
+            [0x53]
+            n: $([0..=255]*<2,2>)
+            {
+                let mut rdr = Cursor::new(n);
+                rdr.read_i16::<BigEndian>().unwrap()
             }
 
-        rule signed_8() -> i8
-            = [0x52] n:$([0..=255]*<1,1>) { {
-                    let mut rdr = Cursor::new(n);
-                    let res = rdr.read_i8().unwrap();
-                    res
-                }
+        rule signed_8() -> i8 =
+            [0x52]
+            n: $([0..=255]*<1,1>)
+            {
+                let mut rdr = Cursor::new(n);
+                rdr.read_i8().unwrap()
             }
 
-        rule unsigned_8() -> u8
-            = [0x62] n:$([0..=255]*<1,1>) { {
-                    let mut rdr = Cursor::new(n);
-                    let res = rdr.read_u8().unwrap();
-                    res
-                }
+        rule unsigned_8() -> u8 =
+            [0x62]
+            n: $([0..=255]*<1,1>)
+            {
+                let mut rdr = Cursor::new(n);
+                rdr.read_u8().unwrap()
             }
 
-        rule optional_signed_16() -> Option<i16>
-            = (v:signed_16() { Some(v) }) / ( [0x01] { None })
+        rule optional_signed_16() -> Option<i16> =
+            (v:signed_16() { Some(v) }) / ([0x01] { None })
 
-        rule optional_unsigned_16() -> Option<u16>
-            = (v:unsigned_16() { Some(v) }) / ( [0x01] { None })
+        rule optional_unsigned_16() -> Option<u16> =
+            (v:unsigned_16() { Some(v) }) / ([0x01] { None })
 
-        rule optional_signed_8() -> Option<i8>
-            = (v:signed_8() { Some(v) }) / ( [0x01] { None })
+        rule optional_signed_8() -> Option<i8> =
+            (v:signed_8() { Some(v) }) / ([0x01] { None })
 
-        rule optional_unsigned_8() -> Option<u8>
-            = (v:unsigned_8() { Some(v) }) / ( [0x01] { None })
+        rule optional_unsigned_8() -> Option<u8> =
+            (v:unsigned_8() { Some(v) }) / ([0x01] { None })
 
-        rule optional_unsigned_32() -> Option<u32>
-            = (v:unsigned_32() { Some(v) }) / ( [0x01] { None })
+        rule optional_unsigned_32() -> Option<u32> =
+            (v:unsigned_32() { Some(v) }) / ([0x01] { None })
 
-        rule string0() -> Vec<u8> = [0x01] n:(any_number())*<0,0> { n }
-        rule string1() -> Vec<u8> = [0x02] n:(any_number())*<1,1> { n }
-        rule string2() -> Vec<u8> = [0x03] n:(any_number())*<2,2> { n }
-        rule string3() -> Vec<u8> = [0x04] n:(any_number())*<3,3> { n }
-        rule string4() -> Vec<u8> = [0x05] n:(any_number())*<4,4> { n }
-        rule string5() -> Vec<u8> = [0x06] n:(any_number())*<5,5> { n }
-        rule string6() -> Vec<u8> = [0x07] n:(any_number())*<6,6> { n }
-        rule string7() -> Vec<u8> = [0x08] n:(any_number())*<7,7> { n }
-        rule string8() -> Vec<u8> = [0x09] n:(any_number())*<8,8> { n }
-        rule string9() -> Vec<u8> = [0x0a] n:(any_number())*<9,9> { n }
-        rule string10() -> Vec<u8> = [0x0b] n:(any_number())*<10,10> { n }
-        rule string11() -> Vec<u8> = [0x0c] n:(any_number())*<11,11> { n }
-        rule string12() -> Vec<u8> = [0x0d] n:(any_number())*<12,12> { n }
-        rule string13() -> Vec<u8> = [0x0e] n:(any_number())*<13,13> { n }
-        rule string14() -> Vec<u8> = [0x0f] n:(any_number())*<14,14> { n }
-        rule string15() -> Vec<u8> = [0x10] n:(any_number())*<15,15> { n }
-        rule string16() -> Vec<u8> = [0x11] n:(any_number())*<16,16> { n }
-        rule string17() -> Vec<u8> = [0x81] [0x03] n:(any_number())*<17,17> { n }
-        rule string18() -> Vec<u8> = [0x81] [0x04] n:(any_number())*<18,18> { n }
-        rule string19() -> Vec<u8> = [0x81] [0x05] n:(any_number())*<19,19> { n }
-        rule string20() -> Vec<u8> = [0x81] [0x06] n:(any_number())*<20,20> { n }
-        rule string21() -> Vec<u8> = [0x81] [0x07] n:(any_number())*<21,21> { n }
-        rule string22() -> Vec<u8> = [0x81] [0x08] n:(any_number())*<22,22> { n }
-        rule string23() -> Vec<u8> = [0x81] [0x09] n:(any_number())*<23,23> { n }
-        rule string24() -> Vec<u8> = [0x81] [0x0a] n:(any_number())*<24,24> { n }
-        rule string25() -> Vec<u8> = [0x81] [0x0b] n:(any_number())*<25,25> { n }
-        rule string26() -> Vec<u8> = [0x81] [0x0c] n:(any_number())*<26,26> { n }
-        rule string27() -> Vec<u8> = [0x81] [0x0d] n:(any_number())*<27,27> { n }
-        rule string28() -> Vec<u8> = [0x81] [0x0e] n:(any_number())*<28,28> { n }
-        rule string29() -> Vec<u8> = [0x81] [0x0f] n:(any_number())*<29,29> { n }
-        rule string30() -> Vec<u8> = [0x82] [0x00] n:(any_number())*<30,30> { n }
-        rule string31() -> Vec<u8> = [0x82] [0x01] n:(any_number())*<31,31> { n }
-        rule string32() -> Vec<u8> = [0x82] [0x02] n:(any_number())*<32,32> { n }
-        rule string33() -> Vec<u8> = [0x82] [0x03] n:(any_number())*<33,33> { n }
-        rule string34() -> Vec<u8> = [0x82] [0x04] n:(any_number())*<34,34> { n }
-        rule string35() -> Vec<u8> = [0x82] [0x05] n:(any_number())*<35,35> { n }
-        rule string36() -> Vec<u8> = [0x82] [0x06] n:(any_number())*<36,36> { n }
-        rule string37() -> Vec<u8> = [0x82] [0x07] n:(any_number())*<37,37> { n }
-        rule string38() -> Vec<u8> = [0x82] [0x08] n:(any_number())*<38,38> { n }
-        rule string39() -> Vec<u8> = [0x82] [0x09] n:(any_number())*<39,39> { n }
-        rule string40() -> Vec<u8> = [0x82] [0x0a] n:(any_number())*<40,40> { n }
-        rule string41() -> Vec<u8> = [0x82] [0x0b] n:(any_number())*<41,41> { n }
-        rule string42() -> Vec<u8> = [0x82] [0x0c] n:(any_number())*<42,42> { n }
-        rule string43() -> Vec<u8> = [0x82] [0x0d] n:(any_number())*<43,43> { n }
-        rule string44() -> Vec<u8> = [0x82] [0x0e] n:(any_number())*<44,44> { n }
-        rule string45() -> Vec<u8> = [0x82] [0x0f] n:(any_number())*<45,45> { n }
-        rule string46() -> Vec<u8> = [0x83] [0x00] n:(any_number())*<46,46> { n }
-        rule string47() -> Vec<u8> = [0x83] [0x01] n:(any_number())*<47,47> { n }
-        rule string48() -> Vec<u8> = [0x83] [0x02] n:(any_number())*<48,48> { n }
-        rule string() -> Vec<u8> = string0()/string1()/string2()/string3()/string4()/string5()/string6()/string7()/string8()/string9()/string10()/string11()/string12()/string13()/string14()/string15()/string16()/string17()/string18()/string19()/string20()/string21()/string22()/string23()/string24()/string25()/string26()/string27()/string28()/string29()/string30()/string31()/string32()/string33()/string34()/string35()/string36()/string37()/string38()/string39()/string40()/string41()/string42()/string43()/string44()/string45()/string46()/string47()/string48()
+        rule string() -> Vec<u8> =
+            short_string() / long_string()
 
+        rule string_len_4() -> Vec<u8> =
+            [0x05] n:(any_number())*<4> { n }
+
+        rule short_string() -> Vec<u8> =
+            prefix: [0x01..=0x0f]
+            value: (any_number()) * <{
+                let length = prefix - 0x01;
+                length as usize
+            }>
+            { value }
+
+        rule long_string() -> Vec<u8> =
+            prefix_1: [0x81..=0x83]
+            prefix_2: [0x00..=0x0f]
+            value: any_number() * <{
+                let length = match prefix_1 {
+                    0x81 => 14 + prefix_2,
+                    0x82 => 30 + prefix_2,
+                    0x83 => 46 + prefix_2,
+                    _ => unreachable!()
+                };
+                length as usize
+            }>
+            { value }
     }
 }
 
@@ -400,58 +431,5 @@ mod test {
                 messages: vec![SmlMessageEnvelope::GetCloseResponse]
             })
         )
-    }
-
-    // From here on: Generate "generic types", should be solved by build scripts in the future
-    #[test]
-    pub fn generate_strings() {
-        for i in 0..=14 {
-            let length = format!("{:#04x}", i + 1);
-            println!(
-                "rule string{}() -> Vec<u8> = [{}] n:(any_number())*<{},{}> {{ n }}",
-                i, length, i, i
-            );
-        }
-        for i in 17..=50 {
-            let part_1 = ((0xF0 & i) >> 4) + 0x80;
-            let part_2 = 0x0F & i;
-            let part_1 = format!("{:#04x}", part_1);
-            let part_2 = format!("{:#04x}", part_2);
-            println!(
-                "rule string{}() -> Vec<u8> = [{}] [{}] n:(any_number())*<{},{}> {{ n }}",
-                i - 2,
-                part_1,
-                part_2,
-                i - 2,
-                i - 2
-            );
-        }
-
-        let strings = (1..49)
-            .map(|x| format!("string{}()", x))
-            .fold(String::from("string0()"), |a, b| format!("{}/{}", a, b));
-
-        let string_rule = format!("pub rule string = {}", strings);
-
-        println!("{}", string_rule);
-    }
-
-    #[test]
-    pub fn generate_sml_response_body() {
-        for i in 1..=15 {
-            let length = format!("{:#04x}", i + 0x70);
-            println!(
-                "rule list_sml_value{}() -> Vec<SmlListEntry> = [{}] n:(single_sml_value())*<{},{}> {{ n }}",
-                i, length, i, i
-            );
-        }
-
-        let strings = (1..16)
-            .map(|x| format!("list_sml_value{}()", x))
-            .fold(String::from("list_sml_value1()"), |a, b| {
-                format!("{}/{}", a, b)
-            });
-
-        println!("rule list_sml_value() -> Vec<SmlListEntry> = {}", strings);
     }
 }
