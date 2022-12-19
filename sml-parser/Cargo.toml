@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Philipp Vollmer"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-homepage = "https://github.com/torfmaster/hackdose-sml-parser"
+homepage = "https://github.com/torfmaster/hackdose"
 description = "a parser for the smart message language spoken by smart meters"
 
 [dependencies]

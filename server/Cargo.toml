@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Philipp Vollmer"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-homepage = "https://github.com/torfmaster/hackdose-server"
+homepage = "https://github.com/torfmaster/hackdose"
 description = "A server to control smart plugs using data from smart meters"
 
 [dependencies]
