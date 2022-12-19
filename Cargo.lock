@@ -550,7 +550,7 @@ dependencies = [
  "clap 4.0.23",
  "futures",
  "gpio-cdev",
- "hackdose-sml-parser 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hackdose-sml-parser",
  "plotters",
  "rand",
  "serde",
@@ -565,21 +565,6 @@ dependencies = [
 [[package]]
 name = "hackdose-sml-parser"
 version = "0.5.1"
-dependencies = [
- "byteorder",
- "enum-iterator",
- "lazy_static",
- "peg",
- "serde",
- "tokio",
- "tokio-stream",
-]
-
-[[package]]
-name = "hackdose-sml-parser"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40732d3e6f206890d36f753759a46fde3db1d62618e381ef72f75a0e83e16d16"
 dependencies = [
  "byteorder",
  "enum-iterator",
