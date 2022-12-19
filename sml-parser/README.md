@@ -6,10 +6,25 @@ It also contains a mapping for OBIS numbers.
 
 # Usage
 
+This crate comes in three different flavors
+
+## Message-Stream
+
+This is propably the most frequent application: Convert an async byte stream into a stream of SML
+messages. See `examples/serial-stream.rs` for an example.
+
+## Transport
+
+This layer deals with streaming of SML messages from raw bytes.
+
+## Application
+
+The `application` module consumes readly-parsed bodies of SML messages.
+
 Once you have obtained the data for your SML-speaking appliance (e.g. a smart meter), you can use the library as follows:
 
 ```rust
-use hackdose_sml_parser::{
+use hackdose_sml_parser::application::{
     domain::AnyValue, domain::SmlMessageEnvelope, obis::Obis, parser::parse_body,
 };
 

@@ -16,3 +16,10 @@ peg = { version = "0.8.1" }
 serde = { version="1.0.149", features=["derive"] }
 tokio = { version="1.23.0", features=["sync", "io-util", "rt"] }
 tokio-stream = { version="0.1.11", features=["sync"] }
+
+[dev-dependencies]
+tokio-serial = "5.4.3"
+
+[[example]]
+name = "serial-stream"
+crate-type = ["bin"]

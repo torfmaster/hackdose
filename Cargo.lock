@@ -572,6 +572,7 @@ dependencies = [
  "peg",
  "serde",
  "tokio",
+ "tokio-serial",
  "tokio-stream",
 ]
 
