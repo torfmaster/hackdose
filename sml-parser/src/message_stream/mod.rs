@@ -15,7 +15,7 @@ use crate::{
 /// use std::io::Cursor;
 /// use hackdose_sml_parser::message_stream::sml_message_stream;
 ///
-/// #[tokio::main()]
+/// #[tokio::main]
 /// async fn main() {
 ///     let cursor = Cursor::new(vec![0x01, 0x02, 0x03]);
 ///     let message_stream = sml_message_stream(cursor);
