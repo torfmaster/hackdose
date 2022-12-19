@@ -543,7 +543,7 @@ dependencies = [
 
 [[package]]
 name = "hackdose-server"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "byteorder",
  "chrono",
@@ -564,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "hackdose-sml-parser"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "byteorder",
  "enum-iterator",
