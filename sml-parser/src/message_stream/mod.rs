@@ -35,6 +35,9 @@ pub fn sml_message_stream(
 
     tokio::spawn(async move {
         while let Ok(n) = stream.read(&mut buf).await {
+            if n == 0 {
+                break;
+            }
             emit_message(&mut builder, &buf[..n], tx.clone()).await;
         }
     });
