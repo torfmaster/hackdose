@@ -14,11 +14,15 @@ use crate::{
 /// ```
 /// use std::io::Cursor;
 /// use hackdose_sml_parser::message_stream::sml_message_stream;
+/// use tokio_stream::StreamExt;
 ///
-/// #[tokio::main()]
+/// #[tokio::main]
 /// async fn main() {
 ///     let cursor = Cursor::new(vec![0x01, 0x02, 0x03]);
-///     let message_stream = sml_message_stream(cursor);
+///     let mut message_stream = sml_message_stream(cursor);
+///     while let Some(message) = message_stream.next().await {
+///         println!("Message: {:?}", message);
+///     }
 /// }
 /// ```
 pub fn sml_message_stream(
@@ -31,6 +35,9 @@ pub fn sml_message_stream(
 
     tokio::spawn(async move {
         while let Ok(n) = stream.read(&mut buf).await {
+            if n == 0 {
+                break;
+            }
             emit_message(&mut builder, &buf[..n], tx.clone()).await;
         }
     });
