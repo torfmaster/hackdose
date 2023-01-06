@@ -312,9 +312,6 @@ peg::parser! {
         rule string() -> Vec<u8> =
             short_string() / long_string()
 
-        rule string_len_4() -> Vec<u8> =
-            [0x05] n:(any_number())*<4> { n }
-
         rule short_string() -> Vec<u8> =
             prefix: [0x01..=0x0f]
             value: (any_number()) * <{
