@@ -28,7 +28,7 @@ pub struct GetListResponseBody {
 #[derive(PartialEq, Debug, Clone)]
 pub struct SmlListEntry {
     pub object_name: Vec<u8>,
-    pub status: Option<u32>,
+    pub status: Option<usize>,
     pub value_time: Vec<u8>,
     pub unit: Option<u8>,
     pub scaler: Option<i8>,
