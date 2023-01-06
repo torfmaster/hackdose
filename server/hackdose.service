@@ -2,7 +2,7 @@
 Description=Hackdose
 
 [Service]
-ExecStart=/root/hackdose-server --config /root/config.yaml
+ExecStart=/usr/bin/hackdose-server --config /etc/hackdose.yaml
 Restart=on-failure
 EnvironmentFile=/etc/environment
 
