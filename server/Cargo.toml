@@ -1,6 +1,6 @@
 [package]
 name = "hackdose-server"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 authors = ["Philipp Vollmer"]
 license = "MIT OR Apache-2.0"
@@ -17,7 +17,7 @@ tokio = { version= "1.20.1", features = ["full"]  }
 tokio-serial = "5.4.3"
 tplinker = "0.4.4"
 warp = "0.3.2"
-hackdose-sml-parser = { version = "0.7.0", path="../sml-parser" }
+hackdose-sml-parser = { version = "0.8.0", path="../sml-parser" }
 plotters = { version= "0.3.4", features=["svg_backend", "chrono", "line_series"], default-features=false}
 rand = "0.8.5"
 serde = { version="1.0.147", features=["serde_derive"] }
