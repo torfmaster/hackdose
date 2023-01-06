@@ -168,7 +168,7 @@ peg::parser! {
             (v:unsigned_32() { v as usize })
 
         rule transaction_id() -> Vec<u8> =
-            string_len_4()
+            string()
 
         rule group_no() =
             [0x62] any_number()
