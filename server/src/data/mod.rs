@@ -3,15 +3,18 @@ use std::{collections::VecDeque, path::PathBuf, sync::Arc};
 use chrono::{DateTime, Duration, Local, TimeZone};
 use tokio::{
     fs::File,
-    io::{AsyncBufReadExt, BufReader},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     sync::Mutex,
 };
+
+use crate::Configuration;
 
 pub(crate) type DataPoint = (DateTime<Local>, i32);
 
 #[derive(Clone)]
 pub(crate) struct EnergyData {
     store: Arc<Mutex<VecDeque<DataPoint>>>,
+    log_location: PathBuf,
 }
 
 pub(crate) mod constants {
@@ -51,14 +54,16 @@ impl EnergyData {
         }
     }
 
-    pub(crate) async fn try_from_file(
-        filename: &PathBuf,
-        from_date: DateTime<Local>,
-        to_date: DateTime<Local>,
-    ) -> Self {
-        let energy_data = Self::default();
+    pub(crate) async fn try_from_file(config: &Configuration) -> Self {
+        let to_date = Local::now();
+        let from_date = to_date - Duration::hours(constants::DATA_RETENTION_PERIOD_HOURS);
+
+        let energy_data = EnergyData {
+            store: Default::default(),
+            log_location: config.log_location.clone(),
+        };
         let mut buf = energy_data.store.lock().await;
-        let data = File::open(filename).await;
+        let data = File::open(config.log_location.clone()).await;
         match data {
             Ok(data) => {
                 let mut rdr = BufReader::new(data).lines();
@@ -87,12 +92,30 @@ impl EnergyData {
             Err(_) => Default::default(),
         }
     }
+
+    pub(crate) async fn log_data(&self, data: DataPoint) {
+        let f = data.0.format(constants::PERSIST_DATE_FORMAT);
+        let log_line = format!("{};{}\n", f, data.1);
+        let log = tokio::fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(self.log_location.clone())
+            .await;
+
+        match log {
+            Ok(mut file) => {
+                let _ = file.write_all(log_line.as_bytes()).await;
+            }
+            Err(_) => (),
+        }
+    }
 }
 
 impl Default for EnergyData {
     fn default() -> Self {
         Self {
             store: Default::default(),
+            log_location: Default::default(),
         }
     }
 }

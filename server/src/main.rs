@@ -1,5 +1,4 @@
 use business::handle_power_events;
-use chrono::{Duration, Local};
 use clap::Parser;
 use data::EnergyData;
 use hackdose_sml_parser::application::domain::AnyValue;
@@ -59,9 +58,7 @@ async fn main() {
         .unwrap();
     let config = serde_yaml::from_str::<Configuration>(&config_file).unwrap();
 
-    let to_date = Local::now();
-    let from_date = to_date - Duration::hours(24);
-    let energy_data = EnergyData::try_from_file(&config.log_location, from_date, to_date).await;
+    let energy_data = EnergyData::try_from_file(&config).await;
 
     let mut chip = Chip::new(&config.gpio_location).unwrap();
     let output = chip.get_line(config.gpio_power_pin).unwrap();
@@ -82,14 +79,7 @@ async fn main() {
     let config2 = config.clone();
     let energy_data_power = energy_data.clone();
     tokio::task::spawn(async move {
-        handle_power_events(
-            &mut tx,
-            mutex1.clone(),
-            &config.clone(),
-            power_events,
-            energy_data_power,
-        )
-        .await
+        handle_power_events(&mut tx, mutex1.clone(), power_events, energy_data_power).await
     });
     tokio::task::spawn(async move { control_actors(&mut rx, &config2.clone()).await });
     serve_rest_endpoint(mutex2.clone(), energy_data.clone()).await;

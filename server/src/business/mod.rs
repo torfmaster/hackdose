@@ -4,23 +4,15 @@ use hackdose_sml_parser::application::{
     domain::{AnyValue, SmlMessages},
     obis::Obis,
 };
-use tokio::{
-    io::AsyncWriteExt,
-    sync::{mpsc::Sender, Mutex},
-};
+use tokio::sync::{mpsc::Sender, Mutex};
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
 
-use crate::{
-    data::{constants::PERSIST_DATE_FORMAT, EnergyData},
-    smart_meter::body::find_watts,
-    Configuration,
-};
+use crate::{data::EnergyData, smart_meter::body::find_watts};
 
 pub(crate) async fn handle_power_events(
     tx: &mut Sender<i32>,
     mutex: Arc<Mutex<HashMap<Obis, AnyValue>>>,
-    config: &Configuration,
     mut power_events: impl Stream<Item = SmlMessages> + Unpin + Send + 'static,
     mut energy_data: EnergyData,
 ) {
@@ -29,22 +21,10 @@ pub(crate) async fn handle_power_events(
 
         match watts {
             Some(watts) => {
-                let time = chrono::Local::now();
-                energy_data.put((time, watts)).await;
+                let data = (chrono::Local::now(), watts);
+                energy_data.put(data).await;
+                energy_data.log_data(data).await;
 
-                let f = time.format(PERSIST_DATE_FORMAT);
-                let log_line = format!("{};{}\n", f, watts);
-                let log = tokio::fs::OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open(&config.log_location)
-                    .await;
-                match log {
-                    Ok(mut file) => {
-                        let _ = file.write_all(log_line.as_bytes()).await;
-                    }
-                    Err(_) => (),
-                }
                 tx.send(watts).await.unwrap();
             }
             None => {}
