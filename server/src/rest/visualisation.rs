@@ -19,7 +19,7 @@ pub(crate) async fn render_image(energy_data: EnergyData) -> String {
             .x_label_area_size(35)
             .y_label_area_size(40)
             .right_y_label_area_size(40)
-            .build_cartesian_2d(from_date..to_date, -300..5000)
+            .build_cartesian_2d(from_date..to_date, -3000..5000)
             .unwrap();
 
         chart
