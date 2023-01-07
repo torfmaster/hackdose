@@ -4,7 +4,7 @@ use hackdose_sml_parser::application::{domain::AnyValue, obis::Obis};
 use tokio::sync::Mutex;
 use warp::Filter;
 
-use crate::Configuration;
+use crate::{data::EnergyData, Configuration};
 
 use self::visualisation::render_image;
 
@@ -12,18 +12,22 @@ mod visualisation;
 
 pub(crate) async fn serve_rest_endpoint(
     mutex: Arc<Mutex<HashMap<Obis, AnyValue>>>,
+    energy_data: EnergyData,
     config: &Configuration,
 ) {
-    let owned_config = config.clone();
     let energy = warp::path("energy")
         .map(move || mutex.clone())
         .and_then(return_energy);
     let image = warp::path("day")
-        .and(warp::any().map(move || owned_config.clone()))
+        .and(warp::any().map(move || energy_data.clone()))
         .and_then(image);
-    warp::serve(energy.or(image))
-        .run(([0, 0, 0, 0], 8080))
-        .await;
+    warp::serve(
+        energy
+            .or(image)
+            .or(warp::path("log").and(warp::fs::file(config.log_location.clone()))),
+    )
+    .run(([0, 0, 0, 0], 8080))
+    .await;
 }
 
 async fn return_energy(
@@ -32,8 +36,8 @@ async fn return_energy(
     Ok(Box::new(warp::reply::json(&*m.lock().await)))
 }
 
-async fn image(config: Configuration) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
-    let svg_image = render_image(&config).await;
+async fn image(energy_data: EnergyData) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
+    let svg_image = render_image(energy_data).await;
     Ok(Box::new(warp::reply::html(format!(
         "<html>{}</html>",
         svg_image
