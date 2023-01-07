@@ -5,14 +5,13 @@ use hackdose_sml_parser::application::domain::AnyValue;
 use hackdose_sml_parser::application::obis::Obis;
 use hackdose_sml_parser::message_stream::sml_message_stream;
 use serde::Deserialize;
-use smart_meter::uart_ir_sensor_data_stream;
+use smart_meter::{enable_ir_sensor_power_supply, uart_ir_sensor_data_stream};
 use std::sync::Arc;
 use std::{collections::HashMap, path::PathBuf};
 use tokio::fs::File;
 use tokio::io::BufReader;
 
 use actors::control_actors;
-use gpio_cdev::{Chip, LineRequestFlags};
 use rest::serve_rest_endpoint;
 use tokio::io::AsyncReadExt;
 
@@ -46,27 +45,26 @@ struct Args {
     config: PathBuf,
 }
 
+impl Args {
+    async fn get_config_file(&self) -> Configuration {
+        let config = File::open(&self.config).await.unwrap();
+        let mut config_file = String::new();
+        BufReader::new(config)
+            .read_to_string(&mut config_file)
+            .await
+            .unwrap();
+        serde_yaml::from_str::<Configuration>(&config_file).unwrap()
+    }
+}
+
 #[tokio::main(worker_threads = 2)]
 async fn main() {
     let args = Args::parse();
-
-    let config = File::open(args.config).await.unwrap();
-    let mut config_file = String::new();
-    BufReader::new(config)
-        .read_to_string(&mut config_file)
-        .await
-        .unwrap();
-    let config = serde_yaml::from_str::<Configuration>(&config_file).unwrap();
+    let config = args.get_config_file().await;
 
     let energy_data = EnergyData::try_from_file(&config).await;
 
-    let mut chip = Chip::new(&config.gpio_location).unwrap();
-    let output = chip.get_line(config.gpio_power_pin).unwrap();
-    let output_handle = output
-        .request(LineRequestFlags::OUTPUT, 0, "mirror-gpio")
-        .unwrap();
-
-    output_handle.set_value(1).unwrap();
+    enable_ir_sensor_power_supply(&config);
 
     let stream = uart_ir_sensor_data_stream(&config);
     let power_events = sml_message_stream(stream);
