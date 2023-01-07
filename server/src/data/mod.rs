@@ -14,6 +14,11 @@ pub(crate) struct EnergyData {
     store: Arc<Mutex<VecDeque<DataPoint>>>,
 }
 
+pub(crate) mod constants {
+    pub(crate) const PERSIST_DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+    pub(crate) const DATA_RETENTION_PERIOD_HOURS: i64 = 24;
+}
+
 impl EnergyData {
     pub(crate) async fn get_interval(
         &self,
@@ -34,7 +39,9 @@ impl EnergyData {
         let old_index = store
             .iter()
             .enumerate()
-            .find(|(_, e)| data_point.0 - e.0 > Duration::hours(24))
+            .find(|(_, e)| {
+                data_point.0 - e.0 > Duration::hours(constants::DATA_RETENTION_PERIOD_HOURS)
+            })
             .map(|(i, _)| i);
         match old_index {
             Some(old_index) => {
@@ -62,7 +69,9 @@ impl EnergyData {
                         .collect::<Vec<String>>();
                     match &l[..] {
                         [date, value, ..] => {
-                            let date = Local.datetime_from_str(date, "%Y-%m-%d %H:%M:%S").unwrap();
+                            let date = Local
+                                .datetime_from_str(date, constants::PERSIST_DATE_FORMAT)
+                                .unwrap();
                             let watts = i32::from_str_radix(value.as_str(), 10).unwrap();
 
                             if (date < to_date) && (date > from_date) {

@@ -11,7 +11,11 @@ use tokio::{
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
 
-use crate::{data::EnergyData, smart_meter::body::find_watts, Configuration};
+use crate::{
+    data::{constants::PERSIST_DATE_FORMAT, EnergyData},
+    smart_meter::body::find_watts,
+    Configuration,
+};
 
 pub(crate) async fn handle_power_events(
     tx: &mut Sender<i32>,
@@ -28,7 +32,7 @@ pub(crate) async fn handle_power_events(
                 let time = chrono::Local::now();
                 energy_data.put((time, watts)).await;
 
-                let f = time.format("%Y-%m-%d %H:%M:%S");
+                let f = time.format(PERSIST_DATE_FORMAT);
                 let log_line = format!("{};{}\n", f, watts);
                 let log = tokio::fs::OpenOptions::new()
                     .write(true)
