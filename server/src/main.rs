@@ -75,10 +75,11 @@ async fn main() {
     let mutex1 = mutex.clone();
     let mutex2 = mutex.clone();
     let config2 = config.clone();
+    let config3 = config.clone();
     let energy_data_power = energy_data.clone();
     tokio::task::spawn(async move {
         handle_power_events(&mut tx, mutex1.clone(), power_events, energy_data_power).await
     });
     tokio::task::spawn(async move { control_actors(&mut rx, &config2.clone()).await });
-    serve_rest_endpoint(mutex2.clone(), energy_data.clone()).await;
+    serve_rest_endpoint(mutex2.clone(), energy_data.clone(), &config3).await;
 }
