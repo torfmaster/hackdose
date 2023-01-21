@@ -124,7 +124,10 @@ mod test {
 
     #[tokio::test]
     pub async fn gets_data_points() {
-        let mut energy_data = EnergyData::default();
+        let mut energy_data = EnergyData {
+            store: Default::default(),
+            log_location: Default::default(),
+        };
         let t_lower = Local.ymd(2022, 02, 02).and_hms(0, 0, 0);
         let t_upper = Local.ymd(2022, 04, 04).and_hms(0, 3, 0);
         let t_1 = Local.ymd(2022, 04, 04).and_hms(0, 1, 0);
@@ -142,7 +145,10 @@ mod test {
 
     #[tokio::test]
     pub async fn omits_old_data_points() {
-        let mut energy_data = EnergyData::default();
+        let mut energy_data = EnergyData {
+            store: Default::default(),
+            log_location: Default::default(),
+        };
         let t_lower = Local.ymd(2022, 04, 04).and_hms(0, 1, 0);
         let t_upper = Local.ymd(2022, 04, 04).and_hms(0, 3, 0);
 
@@ -164,7 +170,10 @@ mod test {
 
     #[tokio::test]
     pub async fn removes_old_data_points() {
-        let mut energy_data = EnergyData::default();
+        let mut energy_data = EnergyData {
+            store: Default::default(),
+            log_location: Default::default(),
+        };
         let t_lower = Local.ymd(2022, 04, 04).and_hms(11, 11, 11);
         let t_upper = Local.ymd(2022, 08, 04).and_hms(11, 11, 11);
 
