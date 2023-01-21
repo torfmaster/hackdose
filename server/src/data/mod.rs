@@ -89,7 +89,10 @@ impl EnergyData {
                 drop(buf);
                 energy_data
             }
-            Err(_) => Default::default(),
+            Err(_) => Self {
+                store: Default::default(),
+                log_location: config.log_location.clone(),
+            },
         }
     }
 
@@ -97,25 +100,18 @@ impl EnergyData {
         let f = data.0.format(constants::PERSIST_DATE_FORMAT);
         let log_line = format!("{};{}\n", f, data.1);
         let log = tokio::fs::OpenOptions::new()
-            .write(true)
             .append(true)
+            .create(true)
             .open(self.log_location.clone())
             .await;
 
+        dbg!(&log);
+        dbg!(&self.log_location);
         match log {
             Ok(mut file) => {
                 let _ = file.write_all(log_line.as_bytes()).await;
             }
             Err(_) => (),
-        }
-    }
-}
-
-impl Default for EnergyData {
-    fn default() -> Self {
-        Self {
-            store: Default::default(),
-            log_location: Default::default(),
         }
     }
 }
