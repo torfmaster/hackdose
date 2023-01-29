@@ -77,8 +77,14 @@ I assume that you have a Mango PI Pro-Q.
 
 # Deploy
 
-You can use the deploy script `install.sh` to deploy. Make sure to set up an appropriate `.env` file
-(sample included).
+You can use the deploy script `install.sh` to deploy. 
+Put a `hackdose.yaml` and an `.env` (sample included) file in the `server/profiles/<profile>` directory.
+
+To deploy run:
+
+```bash
+PROFILE_NAME=test ./install.sh 
+```
 
 # License
 
