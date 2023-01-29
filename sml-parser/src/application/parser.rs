@@ -139,7 +139,7 @@ peg::parser! {
             object_name: string()
             status: optional_unsigned()
             value_time: string()
-            unit: (optional_unsigned_8())
+            unit: optional_unsigned()
             scaler: scaler()
             value: value() sml_value_signature()
             {
@@ -148,7 +148,7 @@ peg::parser! {
                 }
             }
 
-        rule scaler() -> Option<i8> = optional_signed_8()
+        rule scaler() -> Option<isize> = optional_signed()
 
         rule value() -> AnyValue = arbitrary()
 
@@ -159,21 +159,34 @@ peg::parser! {
             (v:signed() { AnyValue::Signed(v as isize) }) /
             (v:unsigned() { AnyValue::Unsigned(v as usize) })
 
-        rule unsigned() -> usize =
-            (v:unsigned_8() { v as usize }) /
-            (v:unsigned_16() { v as usize } ) /
-            (v:unsigned_24() { v as usize } ) /
-            (v:unsigned_32() { v as usize }) /
-            (v:unsigned_40() { v as usize }) /
-            (v:unsigned_64() { v as usize })
+        pub (crate) rule unsigned() -> usize =
+            prefix: [0x62|0x63|0x64|0x65|0x66|0x67|0x68|0x69]
+            value: (any_number()) * <{
+                let length = prefix - 0x60;
+                length as usize - 1
+            }>
+            {
+                let left_padding = 8+1-(prefix - 0x60) as usize;
+                let mut m = vec![0u8;left_padding];
+                m.append(&mut value.to_vec());
+                let mut rdr = Cursor::new(m);
+                rdr.read_u64::<BigEndian>().unwrap() as usize
+            }
 
-        rule signed() -> usize =
-            (v:signed_8() { v as usize }) /
-            (v:signed_16() { v as usize } ) /
-            (v:signed_24() { v as usize } ) /
-            (v:signed_32() { v as usize }) /
-            (v:signed_40() { v as usize }) /
-            (v:signed_64() { v as usize })
+        pub (crate) rule signed() -> isize =
+            prefix: [0x52|0x53|0x54|0x55|0x56|0x57|0x58|0x59]
+            value: (any_number()) * <{
+                let length = prefix - 0x50;
+                length as usize - 1
+            }>
+            {
+                let left_padding = 8+1-(prefix - 0x50) as usize;
+                let pad_byte = if value[0]>=128 { 0xFF } else { 0x00 };
+                let mut m = vec![pad_byte;left_padding];
+                m.append(&mut (value).to_vec());
+                let mut rdr = Cursor::new(m);
+                rdr.read_i64::<BigEndian>().unwrap() as isize
+            }
 
         rule transaction_id() -> Vec<u8> =
             string()
@@ -190,121 +203,8 @@ peg::parser! {
         rule any_number() -> u8 =
             [0..=255]
 
-        rule signed_8() -> i8 =
-            [0x52]
-            n: $([0..=255]*<1,1>)
-            {
-                let mut rdr = Cursor::new(n);
-                rdr.read_i8().unwrap()
-            }
-
-        rule unsigned_8() -> u8 =
-            [0x62]
-            n: $([0..=255]*<1,1>)
-            {
-                let mut rdr = Cursor::new(n);
-                rdr.read_u8().unwrap()
-            }
-
-        rule signed_16() -> i16 =
-            [0x53]
-            n: $([0..=255]*<2,2>)
-            {
-                let mut rdr = Cursor::new(n);
-                rdr.read_i16::<BigEndian>().unwrap()
-            }
-
-        rule unsigned_16() -> u16 =
-            [0x63]
-            n: $([0..=255]*<2,2>)
-            {
-                let mut rdr = Cursor::new(n);
-                rdr.read_u16::<BigEndian>().unwrap()
-            }
-
-        rule signed_24() -> i32 =
-            [0x54]
-            n: $([0..=255]*<3,3>)
-            {
-                let mut m = vec![0u8];
-                m.append(&mut n.to_vec());
-                let mut rdr = Cursor::new(m);
-                rdr.read_i32::<BigEndian>().unwrap()
-            }
-
-        rule unsigned_24() -> u32 =
-            [0x64]
-            n: $([0..=255]*<3,3>)
-            {
-                let mut m = vec![0u8];
-                m.append(&mut n.to_vec());
-                let mut rdr = Cursor::new(m);
-                rdr.read_u32::<BigEndian>().unwrap()
-            }
-
-        rule signed_32() -> i32 =
-            [0x55]
-            n: $([0..=255]*<4,4>)
-            {
-                let mut rdr = Cursor::new(n);
-                rdr.read_i32::<BigEndian>().unwrap()
-            }
-
-        rule unsigned_32() -> u32 =
-            [0x65]
-            n: $([0..=255]*<4,4>)
-            {
-                let mut rdr = Cursor::new(n);
-                rdr.read_u32::<BigEndian>().unwrap()
-            }
-
-        rule signed_40() -> i64 =
-            [0x56]
-            n: $([0..=255]*<5,5>)
-            {
-                let mut m = vec![0, 0, 0];
-                m.append(&mut n.to_vec());
-                let mut rdr = Cursor::new(m);
-                rdr.read_i64::<BigEndian>().unwrap()
-            }
-
-        rule unsigned_40() -> u64 =
-            [0x66]
-            n: $([0..=255]*<5,5>)
-            {
-                let mut m = vec![0, 0, 0];
-                m.append(&mut n.to_vec());
-                let mut rdr = Cursor::new(m);
-                rdr.read_u64::<BigEndian>().unwrap()
-            }
-
-        rule signed_64() -> i64 =
-            [0x59]
-            n: $([0..=255]*<8,8>)
-            {
-                let mut rdr = Cursor::new(n);
-                rdr.read_i64::<BigEndian>().unwrap()
-            }
-
-        rule unsigned_64() -> u64 =
-            [0x69]
-            n: $([0..=255]*<8,8>)
-            {
-                let mut rdr = Cursor::new(n);
-                rdr.read_u64::<BigEndian>().unwrap()
-            }
-
-        rule optional_signed_16() -> Option<i16> =
-            (v:signed_16() { Some(v) }) / ([0x01] { None })
-
-        rule optional_unsigned_16() -> Option<u16> =
-            (v:unsigned_16() { Some(v) }) / ([0x01] { None })
-
-        rule optional_signed_8() -> Option<i8> =
-            (v:signed_8() { Some(v) }) / ([0x01] { None })
-
-        rule optional_unsigned_8() -> Option<u8> =
-            (v:unsigned_8() { Some(v) }) / ([0x01] { None })
+        rule optional_signed() -> Option<isize> =
+            (v:signed() { Some(v) }) / ([0x01] { None })
 
         rule optional_unsigned() -> Option<usize> =
             (v:unsigned() { Some(v) }) / ([0x01] { None })
@@ -516,5 +416,61 @@ mod test {
         let result = sml_parser::sml_messages(&bytes);
 
         assert_eq!(result.is_ok(), true)
+    }
+
+    #[test]
+    pub fn reads_8_bit_signed() {
+        let bytes = vec![0x52, 0x02];
+
+        let result = sml_parser::signed(&bytes);
+        assert_eq!(result, Ok(2isize));
+    }
+
+    #[test]
+    pub fn reads_negative_8_bit_signed() {
+        let bytes = vec![0x52, 0xFE];
+
+        let result = sml_parser::signed(&bytes);
+        assert_eq!(result, Ok(-2isize));
+    }
+
+    #[test]
+    pub fn reads_32_bit_signed() {
+        let bytes = vec![0x55, 0x00, 0x00, 0x00, 0x01];
+
+        let result = sml_parser::signed(&bytes);
+        assert_eq!(result, Ok(1isize));
+    }
+
+    #[test]
+    pub fn reads_negative_32_bit_signed() {
+        let bytes = vec![0x55, 0xFF, 0xFF, 0xFF, 0xFF];
+
+        let result = sml_parser::signed(&bytes);
+        assert_eq!(result, Ok(-1isize));
+    }
+
+    #[test]
+    pub fn reads_positive_56_bit_unsigned() {
+        let bytes = vec![0x68, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01];
+
+        let result = sml_parser::unsigned(&bytes);
+        assert_eq!(result, Ok(1usize));
+    }
+
+    #[test]
+    pub fn reads_positive_56_bit_signed() {
+        let bytes = vec![0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01];
+
+        let result = sml_parser::signed(&bytes);
+        assert_eq!(result, Ok(1isize));
+    }
+
+    #[test]
+    pub fn reads_negative_56_bit_signed() {
+        let bytes = vec![0x58, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+
+        let result = sml_parser::signed(&bytes);
+        assert_eq!(result, Ok(-1isize));
     }
 }
