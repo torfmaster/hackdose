@@ -4,7 +4,7 @@ use data::EnergyData;
 use hackdose_sml_parser::application::domain::AnyValue;
 use hackdose_sml_parser::application::obis::Obis;
 use hackdose_sml_parser::message_stream::sml_message_stream;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use smart_meter::{enable_ir_sensor_power_supply, uart_ir_sensor_data_stream};
 use std::sync::Arc;
 use std::{collections::HashMap, path::PathBuf};
@@ -21,15 +21,28 @@ mod data;
 mod rest;
 mod smart_meter;
 
-#[derive(Deserialize, Clone)]
-struct ActorConfiguration {
+#[derive(Serialize, Deserialize, Clone)]
+enum ActorConfiguration {
+    HS100(HS100Configuration),
+    Tasmota(TasmotaConfiguration),
+}
+#[derive(Serialize, Deserialize, Clone)]
+struct HS100Configuration {
     address: String,
     disable_threshold: isize,
     enable_threshold: isize,
     duration_minutes: usize,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
+struct TasmotaConfiguration {
+    url: String,
+    disable_threshold: isize,
+    enable_threshold: isize,
+    duration_minutes: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct Configuration {
     actors: Vec<ActorConfiguration>,
     log_location: PathBuf,
