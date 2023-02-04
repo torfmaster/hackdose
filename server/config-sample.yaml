@@ -1,5 +1,11 @@
-actors: 
-  - address: 192.168.178.12:9999
+actors:
+  - !Tasmota
+    url: http://192.168.178.94
+    disable_threshold: 100
+    enable_threshold: -100
+    duration_minutes: 60
+  - !HS100
+    address: 192.168.178.12:9999
     disable_threshold: 100
     enable_threshold: -100
     duration_minutes: 60

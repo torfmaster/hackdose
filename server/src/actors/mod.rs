@@ -1,30 +1,57 @@
 use chrono::{DateTime, Duration, Utc};
 use tokio::sync::mpsc::Receiver;
-use tokio::task::spawn_blocking;
-use tplinker::capabilities::Switch;
-use tplinker::devices::HS100;
 
-use crate::Configuration;
+use crate::{ActorConfiguration, Configuration};
+
+use self::{hs100::HS100Switch, tasmota::TasmotaSwitch};
+
+mod hs100;
+mod tasmota;
 
 struct ActorState {
-    address: String,
     disable_threshold: isize,
     enable_threshold: isize,
     duration_minutes: usize,
     last_set: Option<DateTime<Utc>>,
+    switch: Box<dyn PowerSwitch + Send>,
+}
+
+#[async_trait::async_trait]
+trait PowerSwitch {
+    async fn on(&mut self);
+    async fn off(&mut self);
+}
+
+impl ActorState {
+    fn from_configuration(config: &ActorConfiguration) -> Self {
+        match config {
+            ActorConfiguration::HS100(hs100) => ActorState {
+                disable_threshold: hs100.disable_threshold,
+                enable_threshold: hs100.enable_threshold,
+                duration_minutes: hs100.duration_minutes,
+                last_set: None,
+                switch: Box::new(HS100Switch {
+                    address: hs100.address.clone(),
+                }),
+            },
+            ActorConfiguration::Tasmota(tasmota) => ActorState {
+                disable_threshold: tasmota.disable_threshold,
+                enable_threshold: tasmota.enable_threshold,
+                duration_minutes: tasmota.duration_minutes,
+                last_set: None,
+                switch: Box::new(TasmotaSwitch {
+                    url: tasmota.url.clone(),
+                }),
+            },
+        }
+    }
 }
 
 pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuration) {
     let mut devs = config
         .actors
         .iter()
-        .map(|actor| ActorState {
-            address: actor.address.clone(),
-            disable_threshold: actor.disable_threshold,
-            enable_threshold: actor.enable_threshold,
-            duration_minutes: actor.duration_minutes,
-            last_set: None,
-        })
+        .map(|actor| ActorState::from_configuration(&actor))
         .collect::<Vec<_>>();
 
     if devs.len() == 0 {
@@ -37,11 +64,11 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
         let random_number = rand::random::<usize>() % devs.len();
         let dev = devs.get_mut(random_number).unwrap();
         let ActorState {
-            address,
             disable_threshold,
             enable_threshold,
             duration_minutes,
             last_set,
+            switch,
         } = dev;
 
         let should_be_on = if !on {
@@ -62,19 +89,11 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
                 *last_set = Some(chrono::Utc::now());
             }
         }
-        let address = address.clone();
 
-        spawn_blocking(move || {
-            let dev = HS100::new(&address);
-            if let Ok(dev) = dev {
-                if on {
-                    let _ = dev.switch_on();
-                } else {
-                    let _ = dev.switch_off();
-                }
-            }
-        })
-        .await
-        .unwrap();
+        if on {
+            let _ = switch.on().await;
+        } else {
+            let _ = switch.off().await;
+        }
     }
 }
