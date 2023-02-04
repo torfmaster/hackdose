@@ -98,13 +98,14 @@ peg::parser! {
         rule sml_time() =
             [0x72]
             ([0x62] [0x01] unsigned()) /
-            ([0x62] [0x01] unsigned()) /
-            ([0x62] [0x01] sml_timestamp_local())
+            ([0x62] [0x02] unsigned()) /
+            ([0x62] [0x03] sml_timestamp_local())
 
         rule sml_timestamp_local() =
-            [0x72]
-            ([0x62] [0x01]) unsigned()
-             signed() signed()
+            [0x73]
+                unsigned()
+                signed()
+                signed()
 
         rule get_close_response() -> SmlMessageEnvelope =
             [0x72] [0x63] [0x02] [0x01] [0x71]
@@ -113,7 +114,7 @@ peg::parser! {
                 SmlMessageEnvelope::GetCloseResponse
             }
 
-        rule get_close_response_content() = [0x01]
+        rule get_close_response_content() = [0x01] / string()
 
         rule get_list_response() -> SmlMessageEnvelope =
             [0x72] [0x63] [0x07] [0x01] [0x77]
@@ -122,15 +123,17 @@ peg::parser! {
                 SmlMessageEnvelope::GetListResponse(a)
             }
 
-        rule list_signature() = [0x01]
+        rule list_signature() = [0x01] / string()
 
-        rule act_gateway_time() = [0x01]*<0,1>
+        // optional value might be omitted due to bug in ED-300L
+        rule act_gateway_time() = ([0x01]*<0,1>) / (sml_time())
 
         rule get_list_response_content() -> GetListResponseBody =
-            [0x01]
+            // clientId
+            string()
             server_id: string()
             list_name: string()
-            obscure_prefix_in_get_list_response()
+            ([0x01] / sml_time())
             value_list: list_sml_value() list_signature() act_gateway_time()
             {
                 GetListResponseBody {
@@ -169,7 +172,7 @@ peg::parser! {
 
         rule value() -> AnyValue = arbitrary()
 
-        rule sml_value_signature() = [0x01]
+        rule sml_value_signature() = [0x01] / string()
 
         rule arbitrary() -> AnyValue =
             (v:string() { AnyValue::String(v) }) /
