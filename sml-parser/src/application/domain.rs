@@ -30,8 +30,8 @@ pub struct SmlListEntry {
     pub object_name: Vec<u8>,
     pub status: Option<usize>,
     pub value_time: Vec<u8>,
-    pub unit: Option<u8>,
-    pub scaler: Option<i8>,
+    pub unit: Option<usize>,
+    pub scaler: Option<isize>,
     pub value: AnyValue,
 }
 
@@ -44,11 +44,11 @@ pub enum AnyValue {
 
 /// Scale an SML value by the given scaler (base 10)
 pub trait Scale {
-    fn scale(&self, scaler: i8) -> Self;
+    fn scale(&self, scaler: isize) -> Self;
 }
 
 impl Scale for AnyValue {
-    fn scale(&self, scaler: i8) -> Self {
+    fn scale(&self, scaler: isize) -> Self {
         match self {
             AnyValue::Unsigned(v) => {
                 let scaler = scaler;
