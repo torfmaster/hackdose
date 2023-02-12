@@ -14,6 +14,7 @@ struct ActorState {
     duration_minutes: usize,
     last_set: Option<DateTime<Utc>>,
     switch: Box<dyn PowerSwitch + Send>,
+    on: bool,
 }
 
 #[async_trait::async_trait]
@@ -33,6 +34,7 @@ impl ActorState {
                 switch: Box::new(HS100Switch {
                     address: hs100.address.clone(),
                 }),
+                on: false,
             },
             ActorConfiguration::Tasmota(tasmota) => ActorState {
                 disable_threshold: tasmota.disable_threshold,
@@ -42,6 +44,7 @@ impl ActorState {
                 switch: Box::new(TasmotaSwitch {
                     url: tasmota.url.clone(),
                 }),
+                on: false,
             },
         }
     }
@@ -58,8 +61,6 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
         return;
     }
 
-    let mut on = false;
-
     while let Some(received) = rx.recv().await {
         let random_number = rand::random::<usize>() % devs.len();
         let dev = devs.get_mut(random_number).unwrap();
@@ -69,31 +70,31 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
             duration_minutes,
             last_set,
             switch,
+            on,
         } = dev;
 
-        let should_be_on = if !on {
+        let should_be_on = if !*on {
             received < *enable_threshold as i32
         } else {
             !(received > *disable_threshold as i32)
         };
-        if should_be_on != on {
+        if should_be_on != *on || last_set.is_none() {
             let now = chrono::Utc::now();
             if let Some(last_set_inner) = last_set {
                 let diff = now - *last_set_inner;
                 if diff > Duration::minutes(*duration_minutes as i64) {
-                    on = should_be_on;
+                    *on = should_be_on;
                     *last_set = Some(now.clone());
                 }
             } else {
-                on = should_be_on;
+                *on = should_be_on;
                 *last_set = Some(chrono::Utc::now());
             }
-        }
-
-        if on {
-            let _ = switch.on().await;
-        } else {
-            let _ = switch.off().await;
+            if *on {
+                let _ = switch.on().await;
+            } else {
+                let _ = switch.off().await;
+            }
         }
     }
 }
