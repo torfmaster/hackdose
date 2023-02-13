@@ -109,8 +109,6 @@ impl EnergyData {
             .open(self.log_location.clone())
             .await;
 
-        dbg!(&log);
-        dbg!(&self.log_location);
         match log {
             Ok(mut file) => {
                 let _ = file.write_all(log_line.as_bytes()).await;
