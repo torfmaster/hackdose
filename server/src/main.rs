@@ -27,6 +27,13 @@ struct ActorConfiguration {
     disable_threshold: isize,
     enable_threshold: isize,
     duration_minutes: usize,
+    actor_mode: ActorMode,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+enum ActorMode {
+    Charge,
+    Discharge,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -97,4 +104,19 @@ async fn main() {
     });
     tokio::task::spawn(async move { control_actors(&mut rx, &config2.clone()).await });
     serve_rest_endpoint(mutex2.clone(), energy_data.clone(), &config3).await;
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[tokio::test]
+    pub async fn deserializes_sample_config() {
+        let config = File::open("config-sample.yaml").await.unwrap();
+        let mut config_file = String::new();
+        BufReader::new(config)
+            .read_to_string(&mut config_file)
+            .await
+            .unwrap();
+        serde_yaml::from_str::<Configuration>(&config_file).unwrap();
+    }
 }
