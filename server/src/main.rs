@@ -22,24 +22,26 @@ mod rest;
 mod smart_meter;
 
 #[derive(Serialize, Deserialize, Clone)]
-enum ActorConfiguration {
-    HS100(HS100Configuration),
-    Tasmota(TasmotaConfiguration),
-}
-#[derive(Serialize, Deserialize, Clone)]
-struct HS100Configuration {
-    address: String,
+struct ActorConfiguration {
+    actor: ActorType,
     disable_threshold: isize,
     enable_threshold: isize,
     duration_minutes: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+enum ActorType {
+    HS100(HS100Configuration),
+    Tasmota(TasmotaConfiguration),
+}
+#[derive(Serialize, Deserialize, Clone)]
+struct HS100Configuration {
+    address: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 struct TasmotaConfiguration {
     url: String,
-    disable_threshold: isize,
-    enable_threshold: isize,
-    duration_minutes: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

@@ -1,7 +1,7 @@
 use chrono::{DateTime, Duration, Utc};
 use tokio::sync::mpsc::Receiver;
 
-use crate::{ActorConfiguration, Configuration};
+use crate::{ActorConfiguration, ActorType, Configuration};
 
 use self::{hs100::HS100Switch, tasmota::TasmotaSwitch};
 
@@ -25,27 +25,21 @@ trait PowerSwitch {
 
 impl ActorState {
     fn from_configuration(config: &ActorConfiguration) -> Self {
-        match config {
-            ActorConfiguration::HS100(hs100) => ActorState {
-                disable_threshold: hs100.disable_threshold,
-                enable_threshold: hs100.enable_threshold,
-                duration_minutes: hs100.duration_minutes,
-                last_set: None,
-                switch: Box::new(HS100Switch {
-                    address: hs100.address.clone(),
-                }),
-                on: false,
-            },
-            ActorConfiguration::Tasmota(tasmota) => ActorState {
-                disable_threshold: tasmota.disable_threshold,
-                enable_threshold: tasmota.enable_threshold,
-                duration_minutes: tasmota.duration_minutes,
-                last_set: None,
-                switch: Box::new(TasmotaSwitch {
-                    url: tasmota.url.clone(),
-                }),
-                on: false,
-            },
+        let switch: Box<dyn PowerSwitch + Send + 'static> = match &config.actor {
+            ActorType::HS100(hs100) => Box::new(HS100Switch {
+                address: hs100.address.clone(),
+            }),
+            ActorType::Tasmota(tasmota) => Box::new(TasmotaSwitch {
+                url: tasmota.url.clone(),
+            }),
+        };
+        Self {
+            disable_threshold: config.disable_threshold,
+            enable_threshold: config.enable_threshold,
+            duration_minutes: config.duration_minutes,
+            last_set: None,
+            switch,
+            on: false,
         }
     }
 }
