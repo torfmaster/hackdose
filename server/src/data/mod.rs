@@ -74,13 +74,17 @@ impl EnergyData {
                         .collect::<Vec<String>>();
                     match &l[..] {
                         [date, value, ..] => {
-                            let date = Local
-                                .datetime_from_str(date, constants::PERSIST_DATE_FORMAT)
-                                .unwrap();
-                            let watts = i32::from_str_radix(value.as_str(), 10).unwrap();
+                            let date =
+                                Local.datetime_from_str(date, constants::PERSIST_DATE_FORMAT);
+                            match date {
+                                Ok(date) => {
+                                    let watts = i32::from_str_radix(value.as_str(), 10).unwrap();
 
-                            if (date < to_date) && (date > from_date) {
-                                buf.push_back((date, watts))
+                                    if (date < to_date) && (date > from_date) {
+                                        buf.push_back((date, watts))
+                                    }
+                                }
+                                Err(_) => (),
                             }
                         }
                         _ => (),
@@ -105,8 +109,6 @@ impl EnergyData {
             .open(self.log_location.clone())
             .await;
 
-        dbg!(&log);
-        dbg!(&self.log_location);
         match log {
             Ok(mut file) => {
                 let _ = file.write_all(log_line.as_bytes()).await;
