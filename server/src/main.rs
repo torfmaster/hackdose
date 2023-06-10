@@ -30,10 +30,10 @@ struct ActorConfiguration {
     actor_mode: ActorMode,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 enum ActorMode {
-    Charge,
     Discharge,
+    Charge,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

@@ -57,9 +57,11 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
         return;
     }
 
+    for dev in devs.iter_mut() {
+        dev.switch.off().await;
+    }
     while let Some(received) = rx.recv().await {
-        let random_number = rand::random::<usize>() % devs.len();
-        let dev = devs.get_mut(random_number).unwrap();
+        let dev = get_actor(&mut devs);
         let ActorState {
             disable_threshold,
             enable_threshold,
@@ -96,6 +98,37 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
             }
         }
     }
+}
+
+fn get_actor(devs: &mut Vec<ActorState>) -> &mut ActorState {
+    devs.sort_by(|x, y| (&x.actor_mode).cmp(&y.actor_mode));
+    let index = devs.iter().position(|d| d.actor_mode == ActorMode::Charge);
+    if let Some(index) = index {
+        let (dischargers, chargers) = devs.split_at_mut(index);
+
+        if dischargers.len() > 0 && dischargers.iter().any(|d| d.on) {
+            return get_random_element(dischargers).unwrap();
+        }
+        if chargers.len() > 0 && chargers.iter().any(|d| d.on) {
+            return get_random_element(chargers).unwrap();
+        }
+
+        if dischargers.len() > 0 && rand::random::<bool>() {
+            return get_random_element(dischargers).unwrap();
+        }
+        return get_random_element(chargers).unwrap();
+    } else {
+        return get_random_element(devs).unwrap();
+    }
+}
+
+fn get_random_element<T>(arr: &mut [T]) -> Option<&mut T> {
+    if arr.len() == 0 {
+        return None;
+    }
+    let random_number = rand::random::<usize>() % arr.len();
+    let dev = arr.get_mut(random_number);
+    dev
 }
 
 fn compute_actor_state(
@@ -187,5 +220,59 @@ mod test {
     pub fn stays_not_discharging_if_below_threshold() {
         let should_be_on = compute_actor_state(false, -100, 100, 0, ActorMode::Discharge);
         assert_eq!(should_be_on, false);
+    }
+
+    struct DummyActor;
+
+    #[async_trait::async_trait]
+    impl PowerSwitch for DummyActor {
+        async fn on(&mut self) {}
+
+        async fn off(&mut self) {}
+    }
+
+    #[test]
+    pub fn returns_a_charger_if_a_charger_is_turned_on() {
+        let mut devs = vec![
+            actor(ActorMode::Charge, true),
+            actor(ActorMode::Discharge, false),
+        ];
+        let result = get_actor(&mut devs);
+
+        assert_eq!(result.on, true);
+    }
+
+    #[test]
+    pub fn returns_a_discharger_if_a_discharger_is_turned_on() {
+        let mut devs = vec![
+            actor(ActorMode::Charge, false),
+            actor(ActorMode::Discharge, true),
+        ];
+        let result = get_actor(&mut devs);
+
+        assert_eq!(result.actor_mode, ActorMode::Discharge);
+        assert_eq!(result.on, true);
+    }
+    #[test]
+    pub fn returns_any_turned_off_element_if_no_actor_is_turned_on() {
+        let mut devs = vec![
+            actor(ActorMode::Charge, false),
+            actor(ActorMode::Discharge, false),
+        ];
+        let result = get_actor(&mut devs);
+
+        assert_eq!(result.on, false);
+    }
+
+    fn actor(actor_mode: ActorMode, on: bool) -> ActorState {
+        ActorState {
+            disable_threshold: 100,
+            enable_threshold: -100,
+            duration_minutes: 60,
+            last_set: None,
+            switch: Box::new(DummyActor),
+            on,
+            actor_mode,
+        }
     }
 }
