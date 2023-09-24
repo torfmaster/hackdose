@@ -3,8 +3,9 @@ use tokio::sync::mpsc::Receiver;
 
 use crate::{ActorConfiguration, ActorMode, ActorType, Configuration};
 
-use self::{hs100::HS100Switch, tasmota::TasmotaSwitch};
+use self::{ahoy_dtu::AhoyDtu, hs100::HS100Switch, tasmota::TasmotaSwitch};
 
+mod ahoy_dtu;
 mod hs100;
 mod tasmota;
 
@@ -16,12 +17,14 @@ struct ActorState {
     switch: Box<dyn PowerSwitch + Send>,
     on: bool,
     actor_mode: ActorMode,
+    last_updated: Option<DateTime<Utc>>,
 }
 
 #[async_trait::async_trait]
 trait PowerSwitch {
     async fn on(&mut self);
     async fn off(&mut self);
+    async fn set_power(&mut self, power: isize);
 }
 
 impl ActorState {
@@ -33,12 +36,19 @@ impl ActorState {
             ActorType::Tasmota(tasmota) => Box::new(TasmotaSwitch {
                 url: tasmota.url.clone(),
             }),
+            ActorType::Ahoy(ahoy) => Box::new(AhoyDtu {
+                url: ahoy.url.clone(),
+                upper_limit_watts: ahoy.upper_limit_watts,
+                inverter_no: ahoy.inverter_no,
+                current_watts: 0,
+            }),
         };
         Self {
             disable_threshold: config.disable_threshold,
             enable_threshold: config.enable_threshold,
             duration_minutes: config.duration_minutes,
             last_set: None,
+            last_updated: None,
             switch,
             on: false,
             actor_mode: config.actor_mode.clone(),
@@ -59,7 +69,9 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
 
     for dev in devs.iter_mut() {
         dev.switch.off().await;
+        dev.switch.set_power(0).await;
     }
+
     while let Some(received) = rx.recv().await {
         let dev = get_actor(&mut devs);
         let ActorState {
@@ -70,6 +82,7 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
             switch,
             actor_mode,
             on,
+            last_updated,
         } = dev;
 
         let should_be_on = compute_actor_state(
@@ -78,9 +91,10 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
             *enable_threshold,
             *disable_threshold,
             actor_mode.clone(),
-        ) || last_set.is_none();
+        );
+        let now = chrono::Utc::now();
+
         if should_be_on != *on {
-            let now = chrono::Utc::now();
             if let Some(last_set_inner) = last_set {
                 let diff = now - *last_set_inner;
                 if diff > Duration::minutes(*duration_minutes as i64) {
@@ -101,6 +115,21 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
                     let _ = switch.off().await;
                 }
             }
+        }
+
+        if let Some(last_updated_inner) = last_updated {
+            let diff = now - *last_updated_inner;
+            if diff > Duration::minutes(*duration_minutes as i64) {
+                *last_updated = Some(now);
+                dbg!("refresh");
+                let _ = switch.set_power(received as isize).await;
+            } else {
+                dbg!("skip");
+            }
+        } else {
+            *last_updated = Some(now);
+            dbg!("first");
+            let _ = switch.set_power(received as isize).await;
         }
     }
 }
@@ -234,6 +263,7 @@ mod test {
         async fn on(&mut self) {}
 
         async fn off(&mut self) {}
+        async fn set_power(&mut self, _: isize) {}
     }
 
     #[test]
@@ -278,6 +308,7 @@ mod test {
             switch: Box::new(DummyActor),
             on,
             actor_mode,
+            last_updated: None,
         }
     }
 }

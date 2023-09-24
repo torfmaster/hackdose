@@ -40,6 +40,7 @@ enum ActorMode {
 enum ActorType {
     HS100(HS100Configuration),
     Tasmota(TasmotaConfiguration),
+    Ahoy(AhoyConfiguration),
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct HS100Configuration {
@@ -49,6 +50,13 @@ struct HS100Configuration {
 #[derive(Serialize, Deserialize, Clone)]
 struct TasmotaConfiguration {
     url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct AhoyConfiguration {
+    upper_limit_watts: usize,
+    url: String,
+    inverter_no: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
