@@ -86,15 +86,20 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
                 if diff > Duration::minutes(*duration_minutes as i64) {
                     *on = should_be_on;
                     *last_set = Some(now.clone());
+                    if *on {
+                        let _ = switch.on().await;
+                    } else {
+                        let _ = switch.off().await;
+                    }
                 }
             } else {
                 *on = should_be_on;
                 *last_set = Some(chrono::Utc::now());
-            }
-            if *on {
-                let _ = switch.on().await;
-            } else {
-                let _ = switch.off().await;
+                if *on {
+                    let _ = switch.on().await;
+                } else {
+                    let _ = switch.off().await;
+                }
             }
         }
     }
