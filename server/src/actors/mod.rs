@@ -121,14 +121,11 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
             let diff = now - *last_updated_inner;
             if diff > Duration::minutes(*duration_minutes as i64) {
                 *last_updated = Some(now);
-                dbg!("refresh");
                 let _ = switch.set_power(received as isize).await;
             } else {
-                dbg!("skip");
             }
         } else {
             *last_updated = Some(now);
-            dbg!("first");
             let _ = switch.set_power(received as isize).await;
         }
     }
