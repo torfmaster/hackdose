@@ -3,4 +3,4 @@ members = [
 	"server",
 	"sml-parser"
 ] 
-
+resolver="2"
