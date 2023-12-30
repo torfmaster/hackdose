@@ -2,13 +2,17 @@ use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     extract::{FromRef, State},
+    http::Method,
     response::Html,
     routing::get,
     Json, Router,
 };
 use hackdose_sml_parser::application::{domain::AnyValue, obis::Obis};
 use tokio::sync::Mutex;
-use tower_http::services::ServeFile;
+use tower_http::{
+    cors::{Any, CorsLayer},
+    services::{ServeDir, ServeFile},
+};
 
 use crate::{data::EnergyData, Configuration};
 
@@ -42,15 +46,19 @@ pub(crate) async fn serve_rest_endpoint(
     energy_data: EnergyData,
     config: &Configuration,
 ) {
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     let app_state = AppState {
         energy_data: energy_data,
         smart_meter_state: SmartMeterState(mutex),
     };
+
     let app = Router::new()
-        .route("/energy", get(return_energy))
-        .route("/day", get(image))
-        .nest_service("/log", ServeFile::new(config.log_location.clone()))
+        .route("/api/energy", get(return_energy))
+        .route("/api/day", get(image))
+        .route("/api/day_raw", get(image_raw))
+        .layer(CorsLayer::permissive())
+        .nest_service("/api/log", ServeFile::new(config.log_location.clone()))
+        .nest_service("/", ServeDir::new("../app/dist"))
         .with_state(app_state);
 
     let _ = axum::serve(listener, app).await;
@@ -66,4 +74,10 @@ async fn image(energy_data: State<EnergyData>) -> Html<String> {
     let State(e) = energy_data;
     let svg_image = render_image(e).await;
     Html(format!("<html>{}</html>", svg_image))
+}
+
+async fn image_raw(energy_data: State<EnergyData>) -> String {
+    let State(e) = energy_data;
+    let svg_image = render_image(e).await;
+    svg_image
 }
