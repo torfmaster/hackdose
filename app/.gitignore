@@ -4,9 +4,9 @@
 
 # Webpack & Node
 
-/node_modules/
 /pkg
 /dist/
+/node_modules
 
 # IntelliJ
 

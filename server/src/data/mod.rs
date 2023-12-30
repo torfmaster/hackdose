@@ -1,6 +1,7 @@
 use std::{collections::VecDeque, path::PathBuf, sync::Arc};
 
-use chrono::{DateTime, Duration, Local, TimeZone};
+use chrono::{DateTime, Duration, TimeZone, Utc};
+use hackdose_server_shared::DataPoint;
 use tokio::{
     fs::File,
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -8,8 +9,6 @@ use tokio::{
 };
 
 use crate::Configuration;
-
-pub(crate) type DataPoint = (DateTime<Local>, i32);
 
 #[derive(Clone)]
 pub(crate) struct EnergyData {
@@ -19,20 +18,20 @@ pub(crate) struct EnergyData {
 
 pub(crate) mod constants {
     pub(crate) const PERSIST_DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
-    pub(crate) const DATA_RETENTION_PERIOD_HOURS: i64 = 24;
+    pub(crate) const DATA_RETENTION_PERIOD_DAYS: i64 = 7;
 }
 
 impl EnergyData {
     pub(crate) async fn get_interval(
         &self,
-        lower: DateTime<Local>,
-        upper: DateTime<Local>,
+        lower: DateTime<Utc>,
+        upper: DateTime<Utc>,
     ) -> Vec<DataPoint> {
         let store = self.store.lock().await;
         store
             .iter()
-            .cloned()
-            .filter(|(t, _)| t >= &lower && t < &upper)
+            .map(|x| *x)
+            .filter(|p| p.date >= lower && p.date < upper)
             .collect::<Vec<_>>()
     }
 
@@ -43,7 +42,7 @@ impl EnergyData {
             .iter()
             .enumerate()
             .find(|(_, e)| {
-                data_point.0 - e.0 > Duration::hours(constants::DATA_RETENTION_PERIOD_HOURS)
+                data_point.date - e.date > Duration::days(constants::DATA_RETENTION_PERIOD_DAYS)
             })
             .map(|(i, _)| i);
         match old_index {
@@ -55,8 +54,8 @@ impl EnergyData {
     }
 
     pub(crate) async fn try_from_file(config: &Configuration) -> Self {
-        let to_date = Local::now();
-        let from_date = to_date - Duration::hours(constants::DATA_RETENTION_PERIOD_HOURS);
+        let to_date = Utc::now();
+        let from_date = to_date - Duration::days(constants::DATA_RETENTION_PERIOD_DAYS);
 
         let energy_data = EnergyData {
             store: Default::default(),
@@ -74,14 +73,16 @@ impl EnergyData {
                         .collect::<Vec<String>>();
                     match &l[..] {
                         [date, value, ..] => {
-                            let date =
-                                Local.datetime_from_str(date, constants::PERSIST_DATE_FORMAT);
+                            let date = Utc.datetime_from_str(date, constants::PERSIST_DATE_FORMAT);
                             match date {
                                 Ok(date) => {
                                     let watts = i32::from_str_radix(value.as_str(), 10).unwrap();
 
                                     if (date < to_date) && (date > from_date) {
-                                        buf.push_back((date, watts))
+                                        buf.push_back(DataPoint {
+                                            date: date.into(),
+                                            value: watts,
+                                        })
                                     }
                                 }
                                 Err(_) => (),
@@ -101,8 +102,8 @@ impl EnergyData {
     }
 
     pub(crate) async fn log_data(&self, data: DataPoint) {
-        let f = data.0.format(constants::PERSIST_DATE_FORMAT);
-        let log_line = format!("{};{}\n", f, data.1);
+        let f = data.date.format(constants::PERSIST_DATE_FORMAT);
+        let log_line = format!("{};{}\n", f, data.value);
         let log = tokio::fs::OpenOptions::new()
             .append(true)
             .create(true)
@@ -130,19 +131,41 @@ mod test {
             store: Default::default(),
             log_location: Default::default(),
         };
-        let t_lower = Local.ymd(2022, 02, 02).and_hms(0, 0, 0);
-        let t_upper = Local.ymd(2022, 04, 04).and_hms(0, 3, 0);
-        let t_1 = Local.ymd(2022, 04, 04).and_hms(0, 1, 0);
-        let t_2 = Local.ymd(2022, 04, 04).and_hms(0, 2, 0);
+        let t_lower = Utc.with_ymd_and_hms(2022, 02, 02, 0, 0, 0).unwrap();
+        let t_upper = Utc.with_ymd_and_hms(2022, 04, 04, 0, 3, 0).unwrap();
+        let t_1 = Utc.with_ymd_and_hms(2022, 04, 04, 0, 1, 0).unwrap();
+        let t_2 = Utc.with_ymd_and_hms(2022, 04, 04, 0, 2, 0).unwrap();
 
         let x_1 = 1;
         let x_2 = 2;
 
-        energy_data.put((t_1, x_1)).await;
-        energy_data.put((t_2, x_2)).await;
+        energy_data
+            .put(DataPoint {
+                date: t_1,
+                value: x_1,
+            })
+            .await;
+        energy_data
+            .put(DataPoint {
+                date: t_2,
+                value: x_2,
+            })
+            .await;
 
         let points = energy_data.get_interval(t_lower, t_upper).await;
-        assert_eq!(points, vec![(t_1, x_1), (t_2, x_2)])
+        assert_eq!(
+            points,
+            vec![
+                DataPoint {
+                    date: t_1,
+                    value: x_1
+                },
+                DataPoint {
+                    date: t_2,
+                    value: x_2
+                }
+            ]
+        )
     }
 
     #[tokio::test]
@@ -151,23 +174,44 @@ mod test {
             store: Default::default(),
             log_location: Default::default(),
         };
-        let t_lower = Local.ymd(2022, 04, 04).and_hms(0, 1, 0);
-        let t_upper = Local.ymd(2022, 04, 04).and_hms(0, 3, 0);
+        let t_lower = Utc.with_ymd_and_hms(2022, 04, 04, 0, 1, 0).unwrap();
+        let t_upper = Utc.with_ymd_and_hms(2022, 04, 04, 0, 3, 0).unwrap();
 
-        let t_1 = Local.ymd(2022, 04, 04).and_hms(0, 0, 0);
-        let t_2 = Local.ymd(2022, 04, 04).and_hms(0, 2, 0);
-        let t_3 = Local.ymd(2022, 04, 04).and_hms(0, 4, 0);
+        let t_1 = Utc.with_ymd_and_hms(2022, 04, 04, 0, 0, 0).unwrap();
+        let t_2 = Utc.with_ymd_and_hms(2022, 04, 04, 0, 2, 0).unwrap();
+        let t_3 = Utc.with_ymd_and_hms(2022, 04, 04, 0, 4, 0).unwrap();
 
         let x_1 = 1;
         let x_2 = 2;
         let x_3 = 3;
 
-        energy_data.put((t_1, x_1)).await;
-        energy_data.put((t_2, x_2)).await;
-        energy_data.put((t_3, x_3)).await;
+        energy_data
+            .put(DataPoint {
+                date: t_1,
+                value: x_1,
+            })
+            .await;
+        energy_data
+            .put(DataPoint {
+                date: t_2,
+                value: x_2,
+            })
+            .await;
+        energy_data
+            .put(DataPoint {
+                date: t_3,
+                value: x_3,
+            })
+            .await;
 
         let points = energy_data.get_interval(t_lower, t_upper).await;
-        assert_eq!(points, vec![(t_2, x_2)])
+        assert_eq!(
+            points,
+            vec![DataPoint {
+                date: t_2,
+                value: x_2
+            }]
+        )
     }
 
     #[tokio::test]
@@ -176,22 +220,49 @@ mod test {
             store: Default::default(),
             log_location: Default::default(),
         };
-        let t_lower = Local.ymd(2022, 04, 04).and_hms(11, 11, 11);
-        let t_upper = Local.ymd(2022, 08, 04).and_hms(11, 11, 11);
+        let t_lower = Utc.with_ymd_and_hms(2022, 04, 04, 11, 11, 11).unwrap();
+        let t_upper = Utc.with_ymd_and_hms(2022, 08, 04, 11, 11, 11).unwrap();
 
-        let t_1 = Local.ymd(2022, 07, 03).and_hms(11, 11, 11);
-        let t_2 = Local.ymd(2022, 07, 05).and_hms(11, 11, 11);
-        let t_3 = Local.ymd(2022, 07, 05).and_hms(11, 12, 11);
+        let t_1 = Utc.with_ymd_and_hms(2022, 06, 10, 11, 11, 11).unwrap();
+        let t_2 = Utc.with_ymd_and_hms(2022, 07, 05, 11, 11, 11).unwrap();
+        let t_3 = Utc.with_ymd_and_hms(2022, 07, 05, 11, 12, 11).unwrap();
 
         let x_1 = 1;
         let x_2 = 2;
         let x_3 = 3;
 
-        energy_data.put((t_1, x_1)).await;
-        energy_data.put((t_2, x_2)).await;
-        energy_data.put((t_3, x_3)).await;
+        energy_data
+            .put(DataPoint {
+                date: t_1,
+                value: x_1,
+            })
+            .await;
+        energy_data
+            .put(DataPoint {
+                date: t_2,
+                value: x_2,
+            })
+            .await;
+        energy_data
+            .put(DataPoint {
+                date: t_3,
+                value: x_3,
+            })
+            .await;
 
         let points = energy_data.get_interval(t_lower, t_upper).await;
-        assert_eq!(points, vec![(t_2, x_2), (t_3, x_3)])
+        assert_eq!(
+            points,
+            vec![
+                DataPoint {
+                    date: t_2,
+                    value: x_2
+                },
+                DataPoint {
+                    date: t_3,
+                    value: x_3
+                }
+            ]
+        )
     }
 }

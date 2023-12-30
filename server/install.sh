@@ -1,6 +1,10 @@
 #!/bin/bash
 set -eux
 
+pushd ../app
+trunk build --release
+popd
+
 source profiles/$PROFILE_NAME/.env
 cargo build --target=$TARGET --release
 sshpass -p $PI_PASSWORD  scp -C -P$PI_SSH_PORT hackdose.service $PI_USER@$PI_HOST:/etc/systemd/system

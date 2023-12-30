@@ -2,6 +2,7 @@
 members = [
 	"server",
 	"sml-parser",
-	"app"
+	"app",
+	"server_shared"
 ] 
 resolver="2"

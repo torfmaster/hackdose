@@ -288,6 +288,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-targets 0.48.5",
 ]
@@ -1119,7 +1120,9 @@ dependencies = [
  "futures",
  "gpio-cdev",
  "hackdose-sml-parser",
- "plotters",
+ "hackdose_server_shared",
+ "include_dir",
+ "mime_guess",
  "rand",
  "reqwest",
  "serde",
@@ -1154,8 +1157,10 @@ dependencies = [
  "chrono",
  "gloo 0.11.0",
  "gloo-utils 0.2.0",
+ "hackdose_server_shared",
  "log",
  "patternfly-yew",
+ "plotters",
  "popper-rs",
  "serde_json",
  "strum",
@@ -1168,6 +1173,14 @@ dependencies = [
  "yew-hooks",
  "yew-more-hooks",
  "yew-nested-router",
+]
+
+[[package]]
+name = "hackdose_server_shared"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
 ]
 
 [[package]]
@@ -1410,6 +1423,25 @@ checksum = "9311685eb9a34808bbb0608ad2fcab9ae216266beca5848613e95553ac914e3b"
 dependencies = [
  "quote",
  "syn 2.0.43",
+]
+
+[[package]]
+name = "include_dir"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18762faeff7122e89e0857b02f7ce6fcc0d101d5e9ad2ad7846cc01d61b7f19e"
+dependencies = [
+ "include_dir_macros",
+]
+
+[[package]]
+name = "include_dir_macros"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b139284b5cf57ecfa712bcc66950bb635b31aff41c188e8a4cfc758eca374a3f"
+dependencies = [
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]

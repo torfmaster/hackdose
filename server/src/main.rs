@@ -91,7 +91,6 @@ impl Args {
 async fn main() {
     let args = Args::parse();
     let config = args.get_config_file().await;
-
     let energy_data = EnergyData::try_from_file(&config).await;
 
     enable_ir_sensor_power_supply(&config);
@@ -102,16 +101,20 @@ async fn main() {
     let (mut tx, mut rx) = tokio::sync::mpsc::channel::<i32>(100);
     let mutex = Arc::new(tokio::sync::Mutex::new(HashMap::<Obis, AnyValue>::new()));
 
-    let mutex1 = mutex.clone();
-    let mutex2 = mutex.clone();
-    let config2 = config.clone();
-    let config3 = config.clone();
+    let power_event_mutex = mutex.clone();
     let energy_data_power = energy_data.clone();
+
     tokio::task::spawn(async move {
-        handle_power_events(&mut tx, mutex1.clone(), power_events, energy_data_power).await
+        handle_power_events(&mut tx, power_event_mutex, power_events, energy_data_power).await
     });
-    tokio::task::spawn(async move { control_actors(&mut rx, &config2.clone()).await });
-    serve_rest_endpoint(mutex2.clone(), energy_data.clone(), &config3).await;
+
+    let control_actors_config = config.clone();
+    tokio::task::spawn(async move { control_actors(&mut rx, &control_actors_config).await });
+
+    let rest_event_mutex = mutex.clone();
+    let rest_config = config.clone();
+    let rest_energy_data = energy_data.clone();
+    serve_rest_endpoint(rest_event_mutex, rest_energy_data, &rest_config).await;
 }
 
 #[cfg(test)]

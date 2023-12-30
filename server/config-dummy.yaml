@@ -14,6 +14,7 @@ actors:
     actor_mode:
       !Charge # Start loop via socat -d -d pty,raw,echo=0 pty,raw,echo=0
 
-ttys_location: /dev/pts/2
+
+ttys_location: /dev/pts/5
 gpio_power_pin: 38 # Pin 35 in Mango PI
 log_location: energy.log
