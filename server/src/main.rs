@@ -63,7 +63,7 @@ struct AhoyConfiguration {
 pub(crate) struct Configuration {
     actors: Vec<ActorConfiguration>,
     log_location: PathBuf,
-    gpio_location: String,
+    gpio_location: Option<String>,
     ttys_location: String,
     gpio_power_pin: u32,
 }
