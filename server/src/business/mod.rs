@@ -1,5 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
+use chrono::Utc;
+use hackdose_server_shared::DataPoint;
 use hackdose_sml_parser::application::{
     domain::{AnyValue, SmlMessages},
     obis::Obis,
@@ -21,7 +23,10 @@ pub(crate) async fn handle_power_events(
 
         match watts {
             Some(watts) => {
-                let data = (chrono::Local::now(), watts);
+                let data = DataPoint {
+                    date: Utc::now(),
+                    value: watts,
+                };
                 energy_data.put(data).await;
                 energy_data.log_data(data).await;
 

@@ -34,5 +34,5 @@ impl PowerSwitch for HS100Switch {
         .unwrap();
     }
 
-    async fn set_power(&mut self, p: isize) {}
+    async fn set_power(&mut self, _: isize) {}
 }

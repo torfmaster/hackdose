@@ -1,20 +1,58 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{
-    extract::{FromRef, State},
-    response::Html,
+    body::Body,
+    extract::{FromRef, Path, Query, State},
+    http::{header, HeaderValue, Response, StatusCode},
     routing::get,
     Json, Router,
 };
+use hackdose_server_shared::{DataPoint, Range};
 use hackdose_sml_parser::application::{domain::AnyValue, obis::Obis};
+use mime_guess::mime;
 use tokio::sync::Mutex;
-use tower_http::services::ServeFile;
+use tower_http::{cors::CorsLayer, services::ServeFile};
 
 use crate::{data::EnergyData, Configuration};
 
-use self::visualisation::render_image;
+use include_dir::{include_dir, Dir};
 
-mod visualisation;
+static STATIC_DIR: Dir<'_> = include_dir!("app/dist/");
+
+async fn static_path(Path(path): Path<String>) -> Response<Body> {
+    let path = path.trim_start_matches('/');
+    let path = if path == "" { "index.html" } else { path };
+    let mime_type = mime_guess::from_path(path).first_or_text_plain();
+
+    match STATIC_DIR.get_file(path) {
+        None => index_response(),
+        Some(file) => Response::builder()
+            .status(StatusCode::OK)
+            .header(
+                header::CONTENT_TYPE,
+                HeaderValue::from_str(mime_type.as_ref()).unwrap(),
+            )
+            .body(Body::from(file.contents()))
+            .unwrap(),
+    }
+}
+
+fn index_response() -> Response<Body> {
+    let file = STATIC_DIR.get_file("index.html").unwrap();
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(
+            header::CONTENT_TYPE,
+            HeaderValue::from_str(mime::TEXT_HTML_UTF_8.as_ref()).unwrap(),
+        )
+        .body(Body::from(file.contents()))
+        .unwrap()
+}
+
+async fn index_handler() -> Response<Body> {
+    index_response()
+}
 
 #[derive(Clone)]
 struct SmartMeterState(Arc<Mutex<HashMap<Obis, AnyValue>>>);
@@ -47,10 +85,14 @@ pub(crate) async fn serve_rest_endpoint(
         energy_data: energy_data,
         smart_meter_state: SmartMeterState(mutex),
     };
+
     let app = Router::new()
-        .route("/energy", get(return_energy))
-        .route("/day", get(image))
-        .nest_service("/log", ServeFile::new(config.log_location.clone()))
+        .route("/api/energy", get(return_energy))
+        .route("/api/data_raw", get(data_raw))
+        .layer(CorsLayer::permissive())
+        .nest_service("/api/log", ServeFile::new(config.log_location.clone()))
+        .route("/*path", get(static_path))
+        .fallback(index_handler)
         .with_state(app_state);
 
     let _ = axum::serve(listener, app).await;
@@ -62,8 +104,9 @@ async fn return_energy(m: State<SmartMeterState>) -> Json<HashMap<Obis, AnyValue
     Json(res.clone())
 }
 
-async fn image(energy_data: State<EnergyData>) -> Html<String> {
+async fn data_raw(energy_data: State<EnergyData>, range: Query<Range>) -> Json<Vec<DataPoint>> {
     let State(e) = energy_data;
-    let svg_image = render_image(e).await;
-    Html(format!("<html>{}</html>", svg_image))
+
+    let data = e.get_interval(range.from, range.to).await.clone();
+    Json(data)
 }

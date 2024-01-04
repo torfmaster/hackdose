@@ -1,6 +1,8 @@
 [workspace]
 members = [
 	"server",
-	"sml-parser"
+	"sml-parser",
+	"app",
+	"server_shared"
 ] 
 resolver="2"
