@@ -20,5 +20,5 @@ impl PowerSwitch for TasmotaSwitch {
         let _ = reqwest::get(url).await;
     }
 
-    async fn set_power(&mut self, p: isize) {}
+    async fn set_power(&mut self, _: isize) {}
 }

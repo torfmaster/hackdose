@@ -7,7 +7,6 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use chrono::{Duration, Utc};
 use hackdose_server_shared::{DataPoint, Range};
 use hackdose_sml_parser::application::{domain::AnyValue, obis::Obis};
 use mime_guess::mime;
