@@ -1,9 +1,9 @@
-use std::{collections::VecDeque, path::PathBuf, sync::Arc};
+use std::{collections::VecDeque, env::temp_dir, path::PathBuf, sync::Arc};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use hackdose_server_shared::DataPoint;
 use tokio::{
-    fs::File,
+    fs::{copy, File},
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     sync::Mutex,
 };
@@ -14,6 +14,7 @@ use crate::Configuration;
 pub(crate) struct EnergyData {
     store: Arc<Mutex<VecDeque<DataPoint>>>,
     log_location: PathBuf,
+    log_semaphore: Arc<Mutex<()>>,
 }
 
 pub(crate) mod constants {
@@ -60,6 +61,7 @@ impl EnergyData {
         let energy_data = EnergyData {
             store: Default::default(),
             log_location: config.log_location.clone(),
+            log_semaphore: Default::default(),
         };
         let mut buf = energy_data.store.lock().await;
         let data = File::open(config.log_location.clone()).await;
@@ -97,11 +99,13 @@ impl EnergyData {
             Err(_) => Self {
                 store: Default::default(),
                 log_location: config.log_location.clone(),
+                log_semaphore: Default::default(),
             },
         }
     }
 
     pub(crate) async fn log_data(&self, data: DataPoint) {
+        let s = self.log_semaphore.lock().await;
         let f = data.date.format(constants::PERSIST_DATE_FORMAT);
         let log_line = format!("{};{}\n", f, data.value);
         let log = tokio::fs::OpenOptions::new()
@@ -116,6 +120,61 @@ impl EnergyData {
             }
             Err(_) => (),
         }
+        drop(s);
+    }
+
+    pub(crate) async fn rotate_log(&self) {
+        let to_date = Utc::now();
+        let from_date = to_date - Duration::days(constants::DATA_RETENTION_PERIOD_DAYS);
+
+        let s = self.log_semaphore.lock().await;
+        let old_filename = self.log_location.clone();
+        let mut new_filename = temp_dir();
+        new_filename.set_file_name("hackdose_rotate.tmp");
+
+        let data = File::open(old_filename.clone()).await;
+
+        let mut log = tokio::fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .create_new(true)
+            .open(new_filename.clone())
+            .await
+            .unwrap();
+
+        match data {
+            Ok(data) => {
+                let mut rdr = BufReader::new(data).lines();
+                while let Ok(Some(line)) = rdr.next_line().await {
+                    let l = line
+                        .split(";")
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>();
+                    match &l[..] {
+                        [date_string, _, ..] => {
+                            let date_parsed =
+                                Utc.datetime_from_str(date_string, constants::PERSIST_DATE_FORMAT);
+                            match date_parsed {
+                                Ok(date) => {
+                                    if (date < to_date) && (date > from_date) {
+                                        let date_string = format!("{}\n", line);
+                                        let _ = log.write_all(date_string.as_bytes()).await;
+                                    }
+                                }
+                                Err(_) => (),
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+                drop(rdr);
+                drop(log);
+                copy(new_filename, old_filename).await;
+            }
+            Err(_) => {}
+        }
+
+        drop(s);
     }
 }
 
@@ -130,6 +189,7 @@ mod test {
         let mut energy_data = EnergyData {
             store: Default::default(),
             log_location: Default::default(),
+            log_semaphore: Default::default(),
         };
         let t_lower = Utc.with_ymd_and_hms(2022, 02, 02, 0, 0, 0).unwrap();
         let t_upper = Utc.with_ymd_and_hms(2022, 04, 04, 0, 3, 0).unwrap();
@@ -173,6 +233,7 @@ mod test {
         let mut energy_data = EnergyData {
             store: Default::default(),
             log_location: Default::default(),
+            log_semaphore: Default::default(),
         };
         let t_lower = Utc.with_ymd_and_hms(2022, 04, 04, 0, 1, 0).unwrap();
         let t_upper = Utc.with_ymd_and_hms(2022, 04, 04, 0, 3, 0).unwrap();
@@ -219,6 +280,7 @@ mod test {
         let mut energy_data = EnergyData {
             store: Default::default(),
             log_location: Default::default(),
+            log_semaphore: Default::default(),
         };
         let t_lower = Utc.with_ymd_and_hms(2022, 04, 04, 11, 11, 11).unwrap();
         let t_upper = Utc.with_ymd_and_hms(2022, 08, 04, 11, 11, 11).unwrap();

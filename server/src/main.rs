@@ -7,9 +7,11 @@ use hackdose_sml_parser::message_stream::sml_message_stream;
 use serde::{Deserialize, Serialize};
 use smart_meter::{enable_ir_sensor_power_supply, uart_ir_sensor_data_stream};
 use std::sync::Arc;
+use std::time::Duration;
 use std::{collections::HashMap, path::PathBuf};
 use tokio::fs::File;
 use tokio::io::BufReader;
+use tokio::time::sleep;
 
 use actors::control_actors;
 use rest::serve_rest_endpoint;
@@ -114,6 +116,15 @@ async fn main() {
     let rest_event_mutex = mutex.clone();
     let rest_config = config.clone();
     let rest_energy_data = energy_data.clone();
+    let rotate_energy_data = energy_data.clone();
+
+    tokio::spawn(async move {
+        loop {
+            sleep(Duration::from_secs(86400)).await;
+            rotate_energy_data.rotate_log().await;
+        }
+    });
+
     serve_rest_endpoint(rest_event_mutex, rest_energy_data, &rest_config).await;
 }
 
