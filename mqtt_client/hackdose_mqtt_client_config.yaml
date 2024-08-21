@@ -1,0 +1,13 @@
+ttys_location: /dev/ttyUSB0
+mqtt_broker: 
+  host: "192.168.1.1"
+  port: 1883
+  username: username
+  password: password
+publications:
+  - topic: homeassistant/energy_meter/power_in
+    obis: SumActiveInstantaneousPower
+  - topic: homeassistant/energy_meter/energy_in
+    obis: PositiveActiveEnergyTotal
+  - topic: homeassistant/energy_meter/energy_out
+    obis: NegativeActiveEnergyTotal

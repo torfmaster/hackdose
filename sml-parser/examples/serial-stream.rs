@@ -4,7 +4,7 @@ use tokio_serial::SerialStream;
 use tokio_stream::StreamExt;
 
 pub(crate) fn uart_ir_sensor_data_stream() -> impl AsyncRead {
-    let ttys_location = "/dev/ttyS0";
+    let ttys_location = "/dev/ttyUSB0";
     let serial = tokio_serial::new(ttys_location, 9600);
     let stream = SerialStream::open(&serial).unwrap();
     stream
