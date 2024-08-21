@@ -1,4 +1,5 @@
 use chrono::{DateTime, Duration, Utc};
+use opendtu::OpenDtu;
 use tokio::sync::mpsc::Receiver;
 
 use crate::{ActorConfiguration, ActorMode, ActorType, Configuration};
@@ -7,6 +8,7 @@ use self::{ahoy_dtu::AhoyDtu, hs100::HS100Switch, tasmota::TasmotaSwitch};
 
 mod ahoy_dtu;
 mod hs100;
+mod opendtu;
 mod tasmota;
 
 struct ActorState {
@@ -41,6 +43,14 @@ impl ActorState {
                 upper_limit_watts: ahoy.upper_limit_watts,
                 inverter_no: ahoy.inverter_no,
                 current_watts: 0,
+            }),
+            ActorType::OpenDtu(opendtu) => Box::new(OpenDtu {
+                url: opendtu.url.clone(),
+                password: opendtu.password.clone(),
+                serial: opendtu.serial.clone(),
+                max_power: opendtu.max_power,
+                current_watts: 0,
+                upper_limit_watts: opendtu.upper_limit_watts,
             }),
         };
         Self {

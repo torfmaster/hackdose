@@ -43,6 +43,7 @@ enum ActorType {
     HS100(HS100Configuration),
     Tasmota(TasmotaConfiguration),
     Ahoy(AhoyConfiguration),
+    OpenDtu(OpenDtuConfiguration),
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct HS100Configuration {
@@ -59,6 +60,15 @@ struct AhoyConfiguration {
     upper_limit_watts: usize,
     url: String,
     inverter_no: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct OpenDtuConfiguration {
+    serial: String,
+    max_power: usize,
+    password: String,
+    url: String,
+    upper_limit_watts: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
