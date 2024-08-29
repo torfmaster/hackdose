@@ -5,7 +5,7 @@ mqtt brokers (i.e. home assistant).
 
 ## Quick Start
 
- - get the appropriate binary `mqtt-client-<your hardware here>` from "releases"
+ - get the appropriate binary `mqtt-client-<your hardware here>` from [releases](https://github.com/torfmaster/hackdose/actions/workflows/release.yaml)
  - copy it to your machine (to `/home/pi`, otherwise you need to adapt the `.service` file below)
  - create a configuration file (see sample) and move it to `/home/pi/hackdose_mqtt_client_config.yaml`
  - enable the client in systemd
