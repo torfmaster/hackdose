@@ -4,5 +4,5 @@ members = [
 	"sml-parser",
 	"app",
 	"server_shared"
-] 
+, "mqtt_client"] 
 resolver="2"

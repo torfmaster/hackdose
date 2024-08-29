@@ -1,0 +1,10 @@
+[Unit]
+Description=Hackdose
+
+[Service]
+ExecStart=/home/pi/hackdose_mqtt_client --config /home/pi/hackdose_mqtt_client_config.yaml
+Restart=on-failure
+EnvironmentFile=/etc/environment
+
+[Install]
+WantedBy=multi-user.target

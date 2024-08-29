@@ -5,6 +5,7 @@ This is the hackdose monorepo. It contains
  * the [server](server/README.md) If you want to use `hackdose` proceed here.
  * the [web app](app/README.md)
  * the [sml parser](sml_parser/README.md)
+ * the [mqtt client](mqtt_client/README.md)
 
 # About Hackdose
 

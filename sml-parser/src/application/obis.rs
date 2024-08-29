@@ -17,7 +17,7 @@ lazy_static! {
 macro_rules! generate_obis {
 
      ($( ($x:ident, $y:expr, $l:literal) ),*) => {
-        #[derive(serde::Serialize, serde::Deserialize, enum_iterator::Sequence, Eq, PartialEq, Hash, Clone)]
+        #[derive(serde::Serialize, serde::Deserialize, enum_iterator::Sequence, Eq, PartialEq, Hash, Clone, Debug)]
         #[non_exhaustive]
         pub enum Obis {
              $(

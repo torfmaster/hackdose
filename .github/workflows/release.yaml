@@ -63,3 +63,13 @@ jobs:
         with:
           name: raspberry-pi-executable
           path: target/armv7-unknown-linux-musleabihf/release/hackdose-server
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: mqtt-client-mango-pi-executable
+          path: target/riscv64gc-unknown-linux-gnu/release/hackdose_mqtt_client
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: mqtt-client-raspberry-pi-executable
+          path: target/armv7-unknown-linux-musleabihf/release/hackdose_mqtt_client

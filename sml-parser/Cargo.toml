@@ -13,6 +13,7 @@ byteorder = "1.4.3"
 enum-iterator = "1.2.0"
 lazy_static = "1.4.0"
 peg = { version = "0.8.1" }
+# peg = { version = "0.8.1", features=["trace"] }
 serde = { version="1.0.149", features=["derive"] }
 tokio = { version="1.23.0", features=["sync", "io-util", "rt"] }
 tokio-stream = { version="0.1.11", features=["sync"] }
