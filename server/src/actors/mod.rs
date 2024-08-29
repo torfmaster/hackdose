@@ -14,7 +14,7 @@ mod tasmota;
 struct ActorState {
     disable_threshold: isize,
     enable_threshold: isize,
-    duration_minutes: usize,
+    duration_seconds: usize,
     last_set: Option<DateTime<Utc>>,
     switch: Box<dyn PowerSwitch + Send>,
     on: bool,
@@ -56,7 +56,7 @@ impl ActorState {
         Self {
             disable_threshold: config.disable_threshold,
             enable_threshold: config.enable_threshold,
-            duration_minutes: config.duration_minutes,
+            duration_seconds: config.duration_seconds,
             last_set: None,
             last_updated: None,
             switch,
@@ -87,7 +87,7 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
         let ActorState {
             disable_threshold,
             enable_threshold,
-            duration_minutes,
+            duration_seconds,
             last_set,
             switch,
             actor_mode,
@@ -107,7 +107,7 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
         if should_be_on != *on {
             if let Some(last_set_inner) = last_set {
                 let diff = now - *last_set_inner;
-                if diff > Duration::minutes(*duration_minutes as i64) {
+                if diff > Duration::seconds(*duration_seconds as i64) {
                     *on = should_be_on;
                     *last_set = Some(now.clone());
                     if *on {
@@ -129,7 +129,7 @@ pub(crate) async fn control_actors(rx: &mut Receiver<i32>, config: &Configuratio
 
         if let Some(last_updated_inner) = last_updated {
             let diff = now - *last_updated_inner;
-            if diff > Duration::minutes(*duration_minutes as i64) {
+            if diff > Duration::seconds(*duration_seconds as i64) {
                 *last_updated = Some(now);
                 let _ = switch.set_power(received as isize).await;
             } else {
@@ -310,7 +310,7 @@ mod test {
         ActorState {
             disable_threshold: 100,
             enable_threshold: -100,
-            duration_minutes: 60,
+            duration_seconds: 360,
             last_set: None,
             switch: Box::new(DummyActor),
             on,

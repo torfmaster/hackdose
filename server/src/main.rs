@@ -28,7 +28,7 @@ struct ActorConfiguration {
     actor: ActorType,
     disable_threshold: isize,
     enable_threshold: isize,
-    duration_minutes: usize,
+    duration_seconds: usize,
     actor_mode: ActorMode,
 }
 
