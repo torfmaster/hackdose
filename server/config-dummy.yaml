@@ -4,13 +4,13 @@ actors:
       url: http://192.168.178.94
     disable_threshold: 100
     enable_threshold: -100
-    duration_minutes: 60
+    duration_seconds: 360
     actor_mode: !Discharge
   - actor: !HS100
       address: 192.168.178.12:9999
     disable_threshold: 100
     enable_threshold: -100
-    duration_minutes: 60
+    duration_seconds: 360
     actor_mode:
       !Charge # Start loop via socat -d -d pty,raw,echo=0 pty,raw,echo=0
 
