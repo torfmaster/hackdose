@@ -44,6 +44,7 @@ enum ActorType {
     Tasmota(TasmotaConfiguration),
     Ahoy(AhoyConfiguration),
     OpenDtu(OpenDtuConfiguration),
+    Marstek(MarstekConfiguration),
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct HS100Configuration {
@@ -69,6 +70,13 @@ struct OpenDtuConfiguration {
     password: String,
     url: String,
     upper_limit_watts: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+
+pub(crate) struct MarstekConfiguration {
+    pub(crate) url: String,
+    pub(crate) upper_limit_watts: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

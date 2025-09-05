@@ -2,7 +2,7 @@ use chrono::{DateTime, Duration, Utc};
 use opendtu::OpenDtu;
 use tokio::sync::mpsc::Receiver;
 
-use crate::{ActorConfiguration, ActorMode, ActorType, Configuration};
+use crate::{actors::marstek::{MarstekCharge, MarstekDischarge}, ActorConfiguration, ActorMode, ActorType, Configuration};
 
 use self::{ahoy_dtu::AhoyDtu, hs100::HS100Switch, tasmota::TasmotaSwitch};
 
@@ -10,6 +10,7 @@ mod ahoy_dtu;
 mod hs100;
 mod opendtu;
 mod tasmota;
+mod marstek;
 
 struct ActorState {
     disable_threshold: isize,
@@ -33,25 +34,42 @@ impl ActorState {
     fn from_configuration(config: &ActorConfiguration) -> Self {
         let switch: Box<dyn PowerSwitch + Send + 'static> = match &config.actor {
             ActorType::HS100(hs100) => Box::new(HS100Switch {
-                address: hs100.address.clone(),
-            }),
+                        address: hs100.address.clone(),
+                    }),
             ActorType::Tasmota(tasmota) => Box::new(TasmotaSwitch {
-                url: tasmota.url.clone(),
-            }),
+                        url: tasmota.url.clone(),
+                    }),
             ActorType::Ahoy(ahoy) => Box::new(AhoyDtu {
-                url: ahoy.url.clone(),
-                upper_limit_watts: ahoy.upper_limit_watts,
-                inverter_no: ahoy.inverter_no,
-                current_watts: 0,
-            }),
+                        url: ahoy.url.clone(),
+                        upper_limit_watts: ahoy.upper_limit_watts,
+                        inverter_no: ahoy.inverter_no,
+                        current_watts: 0,
+                    }),
             ActorType::OpenDtu(opendtu) => Box::new(OpenDtu {
-                url: opendtu.url.clone(),
-                password: opendtu.password.clone(),
-                serial: opendtu.serial.clone(),
-                max_power: opendtu.max_power,
-                current_watts: 0,
-                upper_limit_watts: opendtu.upper_limit_watts,
-            }),
+                        url: opendtu.url.clone(),
+                        password: opendtu.password.clone(),
+                        serial: opendtu.serial.clone(),
+                        max_power: opendtu.max_power,
+                        current_watts: 0,
+                        upper_limit_watts: opendtu.upper_limit_watts,
+                    }),
+            ActorType::Marstek(marstek_configuration) => {
+                if config.actor_mode==ActorMode::Charge {
+                    Box::new(MarstekCharge {
+                        url: marstek_configuration.url.clone(),
+                        upper_limit_watts: marstek_configuration.upper_limit_watts,
+                        current_watts: 0,
+                    })
+                } else {
+                    Box::new(MarstekDischarge {
+                        url: marstek_configuration.url.clone(),
+                        upper_limit_watts: marstek_configuration.upper_limit_watts,
+                        current_watts: 0,
+                    })
+                }
+                
+            },
+
         };
         Self {
             disable_threshold: config.disable_threshold,
