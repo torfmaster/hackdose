@@ -1,4 +1,5 @@
 use business::handle_power_events;
+use chrono::{DateTime, Utc};
 use clap::Parser;
 use data::EnergyData;
 use hackdose_sml_parser::application::domain::AnyValue;
@@ -24,27 +25,37 @@ mod rest;
 mod smart_meter;
 
 #[derive(Serialize, Deserialize, Clone)]
-struct ActorConfiguration {
-    actor: ActorType,
-    disable_threshold: isize,
-    enable_threshold: isize,
-    duration_seconds: usize,
-    actor_mode: ActorMode,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-enum ActorMode {
-    Discharge,
-    Charge,
+struct SwitchingActorConfiguration {
+    actor: SwitchingActorType,
+    time_until_effective_seconds: usize,
+    power: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-enum ActorType {
+struct RegulatingActorConfiguration {
+    actor: RegulatingActorType,
+    time_until_effective_seconds: usize,
+    max_power: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+enum ActorConfiguration {
+    Switching(SwitchingActorConfiguration),
+    Regulating(RegulatingActorConfiguration),
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+enum SwitchingActorType {
     HS100(HS100Configuration),
     Tasmota(TasmotaConfiguration),
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+enum RegulatingActorType {
     Ahoy(AhoyConfiguration),
     OpenDtu(OpenDtuConfiguration),
-    Marstek(MarstekConfiguration),
+    MarstekCharge(MarstekConfiguration),
+    MarstekDischarge(MarstekConfiguration),
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct HS100Configuration {
@@ -81,11 +92,19 @@ pub(crate) struct MarstekConfiguration {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct Configuration {
-    actors: Vec<ActorConfiguration>,
+    actors: Actors,
     log_location: PathBuf,
     gpio_location: Option<String>,
     ttys_location: String,
     gpio_power_pin: u32,
+    lower_limit: isize,
+    upper_limit: isize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct Actors {
+    consumers: Vec<ActorConfiguration>,
+    producers: Vec<ActorConfiguration>,
 }
 
 #[derive(Parser, Debug)]
@@ -118,7 +137,7 @@ async fn main() {
     let stream = uart_ir_sensor_data_stream(&config);
     let power_events = sml_message_stream(stream);
 
-    let (mut tx, mut rx) = tokio::sync::mpsc::channel::<i32>(100);
+    let (mut tx, mut rx) = tokio::sync::mpsc::channel::<(i32, DateTime<Utc>)>(100);
     let mutex = Arc::new(tokio::sync::Mutex::new(HashMap::<Obis, AnyValue>::new()));
 
     let power_event_mutex = mutex.clone();

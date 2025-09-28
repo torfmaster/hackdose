@@ -19,6 +19,4 @@ impl PowerSwitch for TasmotaSwitch {
         url.query_pairs_mut().append_pair("cmnd", "Power off");
         let _ = reqwest::get(url).await;
     }
-
-    async fn set_power(&mut self, _: isize) {}
 }
