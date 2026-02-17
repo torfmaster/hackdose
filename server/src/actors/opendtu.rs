@@ -1,9 +1,13 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    cmp::{max, min},
+    collections::HashMap,
+    time::Duration,
+};
 
 use reqwest::Url;
 use serde::Serialize;
 
-use super::PowerSwitch;
+use crate::actors::Regulator;
 
 pub(crate) struct OpenDtu {
     pub(crate) serial: String,
@@ -16,27 +20,18 @@ pub(crate) struct OpenDtu {
 }
 
 #[async_trait::async_trait]
-impl PowerSwitch for OpenDtu {
-    async fn on(&mut self) {}
+impl Regulator for OpenDtu {
+    async fn change_power(&mut self, power: isize) {
+        let target = (power + self.current_watts as isize) as isize;
+        let target = max(0, target);
+        let target = min(target, self.upper_limit_watts as isize);
 
-    async fn off(&mut self) {
-        self.set_power(0).await;
+        self.current_watts = target as usize;
+        self.set_absolute(target as usize).await;
     }
 
-    async fn set_power(&mut self, power: isize) {
-        let target = power + self.current_watts as isize;
-        let target = if target > self.upper_limit_watts as isize {
-            self.upper_limit_watts
-        } else {
-            if target > 0 {
-                target as usize
-            } else {
-                0
-            }
-        };
-        self.set_absolute(target).await;
-
-        self.current_watts = target;
+    fn power(&self) -> usize {
+        self.current_watts
     }
 }
 

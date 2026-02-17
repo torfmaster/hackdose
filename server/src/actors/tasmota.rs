@@ -1,4 +1,5 @@
 use reqwest::Url;
+use tokio::task;
 
 use super::PowerSwitch;
 
@@ -11,14 +12,12 @@ impl PowerSwitch for TasmotaSwitch {
     async fn on(&mut self) {
         let mut url = Url::parse(&self.url).unwrap().join("cm").unwrap();
         url.query_pairs_mut().append_pair("cmnd", "Power on");
-        let _ = reqwest::get(url).await;
+        task::spawn(reqwest::get(url));
     }
 
     async fn off(&mut self) {
         let mut url = Url::parse(&self.url).unwrap().join("cm").unwrap();
         url.query_pairs_mut().append_pair("cmnd", "Power off");
-        let _ = reqwest::get(url).await;
+        task::spawn(reqwest::get(url));
     }
-
-    async fn set_power(&mut self, _: isize) {}
 }

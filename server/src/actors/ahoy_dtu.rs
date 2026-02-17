@@ -1,16 +1,12 @@
-/*
-
-{"inverter":0,"cmd":11,"tx_request":81,"payload":[1500,0]}
-POST http://ahoy-dtu/api/ctrl
-
-*/
-
-use std::time::Duration;
+use std::{
+    cmp::{max, min},
+    time::Duration,
+};
 
 use reqwest::Url;
 use serde::Serialize;
 
-use super::PowerSwitch;
+use crate::actors::Regulator;
 
 #[derive(Serialize)]
 struct Payload {
@@ -39,27 +35,18 @@ pub(crate) struct AhoyDtu {
 }
 
 #[async_trait::async_trait]
-impl PowerSwitch for AhoyDtu {
-    async fn on(&mut self) {}
+impl Regulator for AhoyDtu {
+    async fn change_power(&mut self, power: isize) {
+        let target = (power + self.current_watts as isize) as isize;
+        let target = max(0, target);
+        let target = min(target, self.upper_limit_watts as isize);
+        self.set_absolute(target as usize).await;
 
-    async fn off(&mut self) {
-        self.set_power(0).await;
+        self.current_watts = target as usize;
     }
 
-    async fn set_power(&mut self, power: isize) {
-        let target = power + self.current_watts as isize;
-        let target = if target > self.upper_limit_watts as isize {
-            self.upper_limit_watts
-        } else {
-            if target > 0 {
-                target as usize
-            } else {
-                0
-            }
-        };
-        self.set_absolute(target).await;
-
-        self.current_watts = target;
+    fn power(&self) -> usize {
+        self.current_watts
     }
 }
 

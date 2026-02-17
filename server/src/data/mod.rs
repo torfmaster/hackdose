@@ -67,7 +67,7 @@ impl EnergyData {
         let data = File::open(config.log_location.clone()).await;
         match data {
             Ok(data) => {
-                let mut rdr = BufReader::new(data).lines();
+                let mut rdr = BufReader::with_capacity(1024 * 1024, data).lines();
                 while let Ok(Some(line)) = rdr.next_line().await {
                     let l = line
                         .split(";")
