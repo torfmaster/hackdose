@@ -56,6 +56,7 @@ enum RegulatingActorType {
     OpenDtu(OpenDtuConfiguration),
     MarstekCharge(MarstekConfiguration),
     MarstekDischarge(MarstekConfiguration),
+    EZ1M(EZ1MConfiguration),
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct HS100Configuration {
@@ -79,6 +80,12 @@ struct OpenDtuConfiguration {
     serial: String,
     max_power: usize,
     password: String,
+    url: String,
+    upper_limit_watts: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct EZ1MConfiguration {
     url: String,
     upper_limit_watts: usize,
 }

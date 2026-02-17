@@ -6,6 +6,7 @@ use tokio::sync::mpsc::Receiver;
 use crate::{
     actors::{
         ahoy_dtu::AhoyDtu,
+        ez1m::EZ1M,
         marstek::{MarstekCharge, MarstekDischarge},
         opendtu::OpenDtu,
         tasmota::TasmotaSwitch,
@@ -16,6 +17,7 @@ use crate::{
 use self::hs100::HS100Switch;
 
 mod ahoy_dtu;
+mod ez1m;
 mod hs100;
 mod marstek;
 mod opendtu;
@@ -215,6 +217,23 @@ impl ActorState {
                             serial: open_dtu_configuration.serial.clone(),
                             max_power: open_dtu_configuration.max_power,
                             password: open_dtu_configuration.password.clone(),
+                        });
+                        ActorState {
+                            time_until_effective_seconds: regulating_actor_configuration
+                                .time_until_effective_seconds,
+                            wait_until: None,
+
+                            special_state: ActorStateType::Regulating(RegulatingActorState {
+                                regulator: regulator,
+                                max_power: regulating_actor_configuration.max_power,
+                            }),
+                        }
+                    }
+                    RegulatingActorType::EZ1M(ez1m_configuration) => {
+                        let regulator = Box::new(EZ1M {
+                            url: ez1m_configuration.url.clone(),
+                            upper_limit_watts: ez1m_configuration.upper_limit_watts,
+                            current_watts: 0,
                         });
                         ActorState {
                             time_until_effective_seconds: regulating_actor_configuration

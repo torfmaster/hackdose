@@ -1,5 +1,6 @@
 use std::cmp::{max, min};
 
+use tokio::task;
 use tokio_modbus::{client::tcp, Slave};
 
 use crate::actors::Regulator;
@@ -38,13 +39,15 @@ impl Regulator for MarstekCharge {
 
         println!("Setting Marstek Charge to power of {}", target);
 
-        let mut ctx = tcp::connect_slave(socket_addr, slave).await.unwrap();
-        let _ = ctx
-            .write_single_register(marstek_registers::STATE, marstek_registers::STATE_CHARGE)
-            .await;
-        let _ = ctx
-            .write_single_register(marstek_registers::FORCIBLE_CHARGE_WATTS, target as u16)
-            .await;
+        task::spawn(async move {
+            let mut ctx = tcp::connect_slave(socket_addr, slave).await.unwrap();
+            let _ = ctx
+                .write_single_register(marstek_registers::STATE, marstek_registers::STATE_CHARGE)
+                .await;
+            let _ = ctx
+                .write_single_register(marstek_registers::FORCIBLE_CHARGE_WATTS, target as u16)
+                .await;
+        });
 
         self.current_watts = target;
     }
@@ -80,15 +83,17 @@ impl Regulator for MarstekDischarge {
 
         println!("Setting Marstek Discharge to power of {}", target);
 
-        let mut ctx = tcp::connect_slave(socket_addr, slave).await.unwrap();
-        let _ = ctx
-            .write_single_register(marstek_registers::STATE, marstek_registers::STATE_DISCHARGE)
-            .await;
-        let _ = ctx
-            .write_single_register(marstek_registers::FORCIBLE_DISCHARGE_WATTS, target as u16)
-            .await;
-
         self.current_watts = target;
+
+        task::spawn(async move {
+            let mut ctx = tcp::connect_slave(socket_addr, slave).await.unwrap();
+            let _ = ctx
+                .write_single_register(marstek_registers::STATE, marstek_registers::STATE_DISCHARGE)
+                .await;
+            let _ = ctx
+                .write_single_register(marstek_registers::FORCIBLE_DISCHARGE_WATTS, target as u16)
+                .await;
+        });
     }
 
     fn power(&self) -> usize {
