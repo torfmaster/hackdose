@@ -11,7 +11,7 @@ use hackdose_server_shared::{DataPoint, Range};
 use hackdose_sml_parser::application::{domain::AnyValue, obis::Obis};
 use mime_guess::mime;
 use tokio::sync::Mutex;
-use tower_http::{cors::CorsLayer, services::ServeFile};
+use tower_http::{compression::CompressionLayer, cors::CorsLayer, services::ServeFile};
 
 use crate::{data::EnergyData, Configuration};
 
@@ -91,6 +91,7 @@ pub(crate) async fn serve_rest_endpoint(
         .route("/api/data_raw", get(data_raw))
         .layer(CorsLayer::permissive())
         .nest_service("/api/log", ServeFile::new(config.log_location.clone()))
+        .layer(CompressionLayer::new().deflate(true))
         .route("/*path", get(static_path))
         .fallback(index_handler)
         .with_state(app_state);

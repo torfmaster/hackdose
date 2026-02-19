@@ -18,6 +18,8 @@ use actors::control_actors;
 use rest::serve_rest_endpoint;
 use tokio::io::AsyncReadExt;
 
+use crate::smart_meter::generic_modbus::spawn_modbus_producer;
+
 mod actors;
 mod business;
 mod data;
@@ -101,11 +103,54 @@ pub(crate) struct MarstekConfiguration {
 pub(crate) struct Configuration {
     actors: Actors,
     log_location: PathBuf,
+    power_measurement: PowerMeasurement,
+    lower_limit: isize,
+    upper_limit: isize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct SmlSmartMeterData {
     gpio_location: Option<String>,
     ttys_location: String,
     gpio_power_pin: u32,
-    lower_limit: isize,
-    upper_limit: isize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) enum StopBits {
+    One,
+    Two,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) enum Parity {
+    Even,
+    Odd,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) enum FlowControl {
+    Software,
+    Hardware,
+    None,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct GenericModbusSlaveData {
+    ttys_location: String,
+    baud_rate: u32,
+    stop_bits: StopBits,
+    parity: Parity,
+    slave_adress: u8,
+    // holds the current effective power
+    register: u16,
+    flow_control: FlowControl,
+    poll_intervall_millis: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) enum PowerMeasurement {
+    SmlSmartMeter(SmlSmartMeterData),
+    GenericModbusSlave(GenericModbusSlaveData),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -138,21 +183,30 @@ async fn main() {
     let args = Args::parse();
     let config = args.get_config_file().await;
     let energy_data = EnergyData::try_from_file(&config).await;
-
-    enable_ir_sensor_power_supply(&config);
-
-    let stream = uart_ir_sensor_data_stream(&config);
-    let power_events = sml_message_stream(stream);
-
     let (mut tx, mut rx) = tokio::sync::mpsc::channel::<(i32, DateTime<Utc>)>(100);
     let mutex = Arc::new(tokio::sync::Mutex::new(HashMap::<Obis, AnyValue>::new()));
 
-    let power_event_mutex = mutex.clone();
-    let energy_data_power = energy_data.clone();
+    match &config.power_measurement {
+        PowerMeasurement::SmlSmartMeter(sml_smart_meter_data) => {
+            enable_ir_sensor_power_supply(&sml_smart_meter_data);
 
-    tokio::task::spawn(async move {
-        handle_power_events(&mut tx, power_event_mutex, power_events, energy_data_power).await
-    });
+            let stream = uart_ir_sensor_data_stream(&sml_smart_meter_data);
+            let power_events = sml_message_stream(stream);
+
+            let power_event_mutex = mutex.clone();
+            let energy_data_power = energy_data.clone();
+
+            tokio::task::spawn(async move {
+                handle_power_events(&mut tx, power_event_mutex, power_events, energy_data_power)
+                    .await
+            });
+        }
+        PowerMeasurement::GenericModbusSlave(config) => {
+            let energy_data_power = energy_data.clone();
+
+            spawn_modbus_producer(config, &mut tx, energy_data_power);
+        }
+    }
 
     let control_actors_config = config.clone();
     tokio::task::spawn(async move { control_actors(&mut rx, &control_actors_config).await });

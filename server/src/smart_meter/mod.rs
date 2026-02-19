@@ -2,17 +2,18 @@ use gpio_cdev::{Chip, LineRequestFlags};
 use tokio::io::AsyncRead;
 use tokio_serial::SerialStream;
 
-use crate::Configuration;
+use crate::{Configuration, SmlSmartMeterData};
 
 pub(crate) mod body;
+pub(crate) mod generic_modbus;
 
-pub(crate) fn uart_ir_sensor_data_stream(config: &Configuration) -> impl AsyncRead {
+pub(crate) fn uart_ir_sensor_data_stream(config: &SmlSmartMeterData) -> impl AsyncRead {
     let serial = tokio_serial::new(&config.ttys_location, 9600);
     let stream = SerialStream::open(&serial).unwrap();
     stream
 }
 
-pub(crate) fn enable_ir_sensor_power_supply(config: &Configuration) {
+pub(crate) fn enable_ir_sensor_power_supply(config: &SmlSmartMeterData) {
     if let Some(gpio_location) = &config.gpio_location {
         let mut chip = Chip::new(gpio_location).unwrap();
         let output = chip.get_line(config.gpio_power_pin).unwrap();
