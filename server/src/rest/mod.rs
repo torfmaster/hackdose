@@ -91,8 +91,8 @@ pub(crate) async fn serve_rest_endpoint(
         .route("/api/data_raw", get(data_raw))
         .layer(CorsLayer::permissive())
         .nest_service("/api/log", ServeFile::new(config.log_location.clone()))
-        .layer(CompressionLayer::new().deflate(true))
         .route("/*path", get(static_path))
+        .layer(CompressionLayer::new().deflate(true))
         .fallback(index_handler)
         .with_state(app_state);
 
