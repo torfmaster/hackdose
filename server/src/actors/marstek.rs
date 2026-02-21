@@ -1,9 +1,8 @@
 use std::cmp::{max, min};
 
 use tokio::task;
-use tokio_modbus::{client::tcp, Slave};
 
-use crate::actors::Regulator;
+use crate::{actors::Regulator, config::ModbusSlave};
 use tokio_modbus::prelude::*;
 
 mod marstek_registers {
@@ -16,7 +15,7 @@ mod marstek_registers {
 }
 
 pub(crate) struct MarstekCharge {
-    pub(crate) url: String,
+    pub(crate) modbus_slave: ModbusSlave,
     pub(crate) upper_limit_watts: usize,
     pub(crate) current_watts: usize,
 }
@@ -34,13 +33,13 @@ impl Regulator for MarstekCharge {
         let target = max(0, target) as usize;
 
         let target = min(target, self.upper_limit_watts);
-        let socket_addr = self.url.parse().unwrap();
-        let slave = Slave(1);
 
         println!("Setting Marstek Charge to power of {}", target);
 
+        let slave = self.modbus_slave.clone();
+
         task::spawn(async move {
-            let mut ctx = tcp::connect_slave(socket_addr, slave).await.unwrap();
+            let mut ctx = slave.connect().await.unwrap();
             let _ = ctx
                 .write_single_register(marstek_registers::STATE, marstek_registers::STATE_CHARGE)
                 .await;
@@ -58,7 +57,7 @@ impl Regulator for MarstekCharge {
 }
 
 pub(crate) struct MarstekDischarge {
-    pub(crate) url: String,
+    pub(crate) modbus_slave: ModbusSlave,
     pub(crate) upper_limit_watts: usize,
     pub(crate) current_watts: usize,
 }
@@ -78,15 +77,14 @@ impl Regulator for MarstekDischarge {
 
         let target = min(target, self.upper_limit_watts);
 
-        let socket_addr = self.url.parse().unwrap();
-        let slave = Slave(1);
-
         println!("Setting Marstek Discharge to power of {}", target);
 
         self.current_watts = target;
 
+        let modbus_slave = self.modbus_slave.clone();
+
         task::spawn(async move {
-            let mut ctx = tcp::connect_slave(socket_addr, slave).await.unwrap();
+            let mut ctx = modbus_slave.connect().await.unwrap();
             let _ = ctx
                 .write_single_register(marstek_registers::STATE, marstek_registers::STATE_DISCHARGE)
                 .await;

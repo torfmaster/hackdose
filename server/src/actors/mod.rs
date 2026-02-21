@@ -248,7 +248,7 @@ impl ActorState {
                     }
                     RegulatingActorType::MarstekCharge(marstek_configuration) => {
                         let regulator = Box::new(MarstekCharge {
-                            url: marstek_configuration.url.clone(),
+                            modbus_slave: marstek_configuration.modbus_slave.clone(),
                             upper_limit_watts: marstek_configuration.upper_limit_watts,
                             current_watts: 0,
                         });
@@ -265,7 +265,7 @@ impl ActorState {
                     }
                     RegulatingActorType::MarstekDischarge(marstek_configuration) => {
                         let regulator = Box::new(MarstekDischarge {
-                            url: marstek_configuration.url.clone(),
+                            modbus_slave: marstek_configuration.modbus_slave.clone(),
                             upper_limit_watts: marstek_configuration.upper_limit_watts,
                             current_watts: 0,
                         });

@@ -2,7 +2,7 @@ use gpio_cdev::{Chip, LineRequestFlags};
 use tokio::io::AsyncRead;
 use tokio_serial::SerialStream;
 
-use crate::{Configuration, SmlSmartMeterData};
+use crate::SmlSmartMeterData;
 
 pub(crate) mod body;
 pub(crate) mod generic_modbus;

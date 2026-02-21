@@ -18,10 +18,12 @@ use actors::control_actors;
 use rest::serve_rest_endpoint;
 use tokio::io::AsyncReadExt;
 
+use crate::config::ModbusSlave;
 use crate::smart_meter::generic_modbus::spawn_modbus_producer;
 
 mod actors;
 mod business;
+mod config;
 mod data;
 mod rest;
 mod smart_meter;
@@ -95,7 +97,7 @@ struct EZ1MConfiguration {
 #[derive(Serialize, Deserialize, Clone)]
 
 pub(crate) struct MarstekConfiguration {
-    pub(crate) url: String,
+    pub(crate) modbus_slave: ModbusSlave,
     pub(crate) upper_limit_watts: usize,
 }
 
@@ -116,41 +118,17 @@ pub(crate) struct SmlSmartMeterData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub(crate) enum StopBits {
-    One,
-    Two,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) enum Parity {
-    Even,
-    Odd,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) enum FlowControl {
-    Software,
-    Hardware,
-    None,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct GenericModbusSlaveData {
-    ttys_location: String,
-    baud_rate: u32,
-    stop_bits: StopBits,
-    parity: Parity,
-    slave_adress: u8,
+pub(crate) struct GenericModbusCounterSlaveData {
+    modbus_slave: ModbusSlave,
     // holds the current effective power
     register: u16,
-    flow_control: FlowControl,
     poll_intervall_millis: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) enum PowerMeasurement {
     SmlSmartMeter(SmlSmartMeterData),
-    GenericModbusSlave(GenericModbusSlaveData),
+    GenericModbusSlave(GenericModbusCounterSlaveData),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
