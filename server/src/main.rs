@@ -18,6 +18,7 @@ use actors::control_actors;
 use rest::serve_rest_endpoint;
 use tokio::io::AsyncReadExt;
 
+use crate::actors::rd6006::RD6006Config;
 use crate::config::ModbusSlave;
 use crate::smart_meter::generic_modbus::spawn_modbus_producer;
 
@@ -61,6 +62,7 @@ enum RegulatingActorType {
     MarstekCharge(MarstekConfiguration),
     MarstekDischarge(MarstekConfiguration),
     EZ1M(EZ1MConfiguration),
+    RD6006(RD6006Config),
 }
 #[derive(Serialize, Deserialize, Clone)]
 struct HS100Configuration {

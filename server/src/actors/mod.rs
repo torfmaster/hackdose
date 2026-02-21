@@ -9,6 +9,7 @@ use crate::{
         ez1m::EZ1M,
         marstek::{MarstekCharge, MarstekDischarge},
         opendtu::OpenDtu,
+        rd6006::RD6006,
         tasmota::TasmotaSwitch,
     },
     ActorConfiguration, Configuration, RegulatingActorType, SwitchingActorType,
@@ -21,6 +22,7 @@ mod ez1m;
 mod hs100;
 mod marstek;
 mod opendtu;
+pub(crate) mod rd6006;
 mod tasmota;
 
 struct ActorState {
@@ -274,6 +276,21 @@ impl ActorState {
                                 .time_until_effective_seconds,
                             wait_until: None,
 
+                            special_state: ActorStateType::Regulating(RegulatingActorState {
+                                regulator: regulator,
+                                max_power: regulating_actor_configuration.max_power,
+                            }),
+                        }
+                    }
+                    RegulatingActorType::RD6006(rd6006_config) => {
+                        let regulator = Box::new(RD6006 {
+                            rd6006_config: rd6006_config.clone(),
+                            current_watts: 0,
+                        });
+                        ActorState {
+                            wait_until: None,
+                            time_until_effective_seconds: regulating_actor_configuration
+                                .time_until_effective_seconds,
                             special_state: ActorStateType::Regulating(RegulatingActorState {
                                 regulator: regulator,
                                 max_power: regulating_actor_configuration.max_power,
