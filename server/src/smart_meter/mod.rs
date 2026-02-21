@@ -1,11 +1,33 @@
 use gpio_cdev::{Chip, LineRequestFlags};
+use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
 use tokio_serial::SerialStream;
 
-use crate::SmlSmartMeterData;
+use crate::config::ModbusSlave;
 
 pub(crate) mod body;
 pub(crate) mod generic_modbus;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) enum PowerMeasurement {
+    SmlSmartMeter(SmlSmartMeterData),
+    GenericModbusSlave(GenericModbusCounterSlaveData),
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct SmlSmartMeterData {
+    gpio_location: Option<String>,
+    ttys_location: String,
+    gpio_power_pin: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct GenericModbusCounterSlaveData {
+    modbus_slave: ModbusSlave,
+    // holds the current effective power
+    register: u16,
+    poll_intervall_millis: usize,
+}
 
 pub(crate) fn uart_ir_sensor_data_stream(config: &SmlSmartMeterData) -> impl AsyncRead {
     let serial = tokio_serial::new(&config.ttys_location, 9600);

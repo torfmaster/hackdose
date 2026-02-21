@@ -1,6 +1,7 @@
 use std::cmp::{max, min};
 
 use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Receiver;
 
 use crate::{
@@ -9,10 +10,11 @@ use crate::{
         ez1m::EZ1M,
         marstek::{MarstekCharge, MarstekDischarge},
         opendtu::OpenDtu,
-        rd6006::RD6006,
+        rd6006::{RD6006Config, RD6006},
         tasmota::TasmotaSwitch,
     },
-    ActorConfiguration, Configuration, RegulatingActorType, SwitchingActorType,
+    config::ModbusSlave,
+    Configuration,
 };
 
 use self::hs100::HS100Switch;
@@ -24,6 +26,80 @@ mod marstek;
 mod opendtu;
 pub(crate) mod rd6006;
 mod tasmota;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct SwitchingActorConfiguration {
+    actor: SwitchingActorType,
+    time_until_effective_seconds: usize,
+    power: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct RegulatingActorConfiguration {
+    actor: RegulatingActorType,
+    time_until_effective_seconds: usize,
+    max_power: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) enum ActorConfiguration {
+    Switching(SwitchingActorConfiguration),
+    Regulating(RegulatingActorConfiguration),
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) enum SwitchingActorType {
+    HS100(HS100Configuration),
+    Tasmota(TasmotaConfiguration),
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) enum RegulatingActorType {
+    Ahoy(AhoyConfiguration),
+    OpenDtu(OpenDtuConfiguration),
+    MarstekCharge(MarstekConfiguration),
+    MarstekDischarge(MarstekConfiguration),
+    EZ1M(EZ1MConfiguration),
+    RD6006(RD6006Config),
+}
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct HS100Configuration {
+    address: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct TasmotaConfiguration {
+    url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct AhoyConfiguration {
+    upper_limit_watts: usize,
+    url: String,
+    inverter_no: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct OpenDtuConfiguration {
+    serial: String,
+    max_power: usize,
+    password: String,
+    url: String,
+    upper_limit_watts: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct EZ1MConfiguration {
+    url: String,
+    upper_limit_watts: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+
+pub(crate) struct MarstekConfiguration {
+    pub(crate) modbus_slave: ModbusSlave,
+    pub(crate) upper_limit_watts: usize,
+}
 
 struct ActorState {
     wait_until: Option<DateTime<Utc>>,

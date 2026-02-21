@@ -8,7 +8,7 @@ use tokio::{
 };
 use tokio_modbus::client::Reader;
 
-use crate::{data::EnergyData, GenericModbusCounterSlaveData};
+use crate::{data::EnergyData, smart_meter::GenericModbusCounterSlaveData};
 
 pub(crate) fn spawn_modbus_producer(
     config: &GenericModbusCounterSlaveData,

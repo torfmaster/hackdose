@@ -18,9 +18,9 @@ use actors::control_actors;
 use rest::serve_rest_endpoint;
 use tokio::io::AsyncReadExt;
 
-use crate::actors::rd6006::RD6006Config;
-use crate::config::ModbusSlave;
+use crate::actors::ActorConfiguration;
 use crate::smart_meter::generic_modbus::spawn_modbus_producer;
+use crate::smart_meter::PowerMeasurement;
 
 mod actors;
 mod business;
@@ -30,107 +30,12 @@ mod rest;
 mod smart_meter;
 
 #[derive(Serialize, Deserialize, Clone)]
-struct SwitchingActorConfiguration {
-    actor: SwitchingActorType,
-    time_until_effective_seconds: usize,
-    power: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct RegulatingActorConfiguration {
-    actor: RegulatingActorType,
-    time_until_effective_seconds: usize,
-    max_power: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-enum ActorConfiguration {
-    Switching(SwitchingActorConfiguration),
-    Regulating(RegulatingActorConfiguration),
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-enum SwitchingActorType {
-    HS100(HS100Configuration),
-    Tasmota(TasmotaConfiguration),
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-enum RegulatingActorType {
-    Ahoy(AhoyConfiguration),
-    OpenDtu(OpenDtuConfiguration),
-    MarstekCharge(MarstekConfiguration),
-    MarstekDischarge(MarstekConfiguration),
-    EZ1M(EZ1MConfiguration),
-    RD6006(RD6006Config),
-}
-#[derive(Serialize, Deserialize, Clone)]
-struct HS100Configuration {
-    address: String,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct TasmotaConfiguration {
-    url: String,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct AhoyConfiguration {
-    upper_limit_watts: usize,
-    url: String,
-    inverter_no: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct OpenDtuConfiguration {
-    serial: String,
-    max_power: usize,
-    password: String,
-    url: String,
-    upper_limit_watts: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct EZ1MConfiguration {
-    url: String,
-    upper_limit_watts: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-
-pub(crate) struct MarstekConfiguration {
-    pub(crate) modbus_slave: ModbusSlave,
-    pub(crate) upper_limit_watts: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct Configuration {
     actors: Actors,
     log_location: PathBuf,
     power_measurement: PowerMeasurement,
     lower_limit: isize,
     upper_limit: isize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct SmlSmartMeterData {
-    gpio_location: Option<String>,
-    ttys_location: String,
-    gpio_power_pin: u32,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct GenericModbusCounterSlaveData {
-    modbus_slave: ModbusSlave,
-    // holds the current effective power
-    register: u16,
-    poll_intervall_millis: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) enum PowerMeasurement {
-    SmlSmartMeter(SmlSmartMeterData),
-    GenericModbusSlave(GenericModbusCounterSlaveData),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
