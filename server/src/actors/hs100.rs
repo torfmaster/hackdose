@@ -1,8 +1,14 @@
+use serde::{Deserialize, Serialize};
 use tokio::task::spawn_blocking;
 use tplinker::capabilities::Switch;
 use tplinker::devices::HS100;
 
 use super::PowerSwitch;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct HS100Configuration {
+    pub(crate) address: String,
+}
 
 pub(crate) struct HS100Switch {
     pub(crate) address: String,

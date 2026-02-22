@@ -4,7 +4,7 @@ use std::{
 };
 
 use reqwest::Url;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::actors::Regulator;
 
@@ -27,6 +27,12 @@ impl Payload {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct AhoyConfiguration {
+    pub(crate) upper_limit_watts: usize,
+    pub(crate) url: String,
+    pub(crate) inverter_no: usize,
+}
 pub(crate) struct AhoyDtu {
     pub(crate) url: String,
     pub(crate) upper_limit_watts: usize,

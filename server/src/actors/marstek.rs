@@ -1,5 +1,6 @@
 use std::cmp::{max, min};
 
+use serde::{Deserialize, Serialize};
 use tokio::task;
 
 use crate::{actors::Regulator, config::ModbusSlave};
@@ -12,6 +13,13 @@ mod marstek_registers {
 
     pub(super) const STATE_CHARGE: u16 = 1;
     pub(super) const STATE_DISCHARGE: u16 = 2;
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+
+pub(crate) struct MarstekConfiguration {
+    pub(crate) modbus_slave: ModbusSlave,
+    pub(crate) upper_limit_watts: usize,
 }
 
 pub(crate) struct MarstekCharge {

@@ -6,14 +6,14 @@ use tokio::sync::mpsc::Receiver;
 
 use crate::{
     actors::{
-        ahoy_dtu::AhoyDtu,
-        ez1m::EZ1M,
-        marstek::{MarstekCharge, MarstekDischarge},
-        opendtu::OpenDtu,
-        rd6006::{RD6006Config, RD6006},
-        tasmota::TasmotaSwitch,
+        ahoy_dtu::{AhoyConfiguration, AhoyDtu},
+        ez1m::{EZ1MConfiguration, EZ1M},
+        hs100::HS100Configuration,
+        marstek::{MarstekCharge, MarstekConfiguration, MarstekDischarge},
+        opendtu::{OpenDtu, OpenDtuConfiguration},
+        rd6006::RD6006Config,
+        tasmota::{TasmotaConfiguration, TasmotaSwitch},
     },
-    config::ModbusSlave,
     Configuration,
 };
 
@@ -61,44 +61,6 @@ pub(crate) enum RegulatingActorType {
     MarstekDischarge(MarstekConfiguration),
     EZ1M(EZ1MConfiguration),
     RD6006(RD6006Config),
-}
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct HS100Configuration {
-    address: String,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct TasmotaConfiguration {
-    url: String,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct AhoyConfiguration {
-    upper_limit_watts: usize,
-    url: String,
-    inverter_no: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct OpenDtuConfiguration {
-    serial: String,
-    max_power: usize,
-    password: String,
-    url: String,
-    upper_limit_watts: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct EZ1MConfiguration {
-    url: String,
-    upper_limit_watts: usize,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-
-pub(crate) struct MarstekConfiguration {
-    pub(crate) modbus_slave: ModbusSlave,
-    pub(crate) upper_limit_watts: usize,
 }
 
 pub(crate) struct ActorState {

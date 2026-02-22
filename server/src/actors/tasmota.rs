@@ -1,7 +1,13 @@
 use reqwest::Url;
+use serde::{Deserialize, Serialize};
 use tokio::task;
 
 use super::PowerSwitch;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct TasmotaConfiguration {
+    pub(crate) url: String,
+}
 
 pub(crate) struct TasmotaSwitch {
     pub(crate) url: String,

@@ -5,9 +5,18 @@ use std::{
 };
 
 use reqwest::Url;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::actors::Regulator;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct OpenDtuConfiguration {
+    pub(crate) serial: String,
+    pub(crate) max_power: usize,
+    pub(crate) password: String,
+    pub(crate) url: String,
+    pub(crate) upper_limit_watts: usize,
+}
 
 pub(crate) struct OpenDtu {
     pub(crate) serial: String,

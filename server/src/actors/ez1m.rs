@@ -4,9 +4,16 @@ use std::{
 };
 
 use reqwest::Url;
+use serde::{Deserialize, Serialize};
 use tokio::task;
 
 use crate::actors::Regulator;
+
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct EZ1MConfiguration {
+    pub(crate) url: String,
+    pub(crate) upper_limit_watts: usize,
+}
 
 pub(crate) struct EZ1M {
     pub(crate) url: String,
