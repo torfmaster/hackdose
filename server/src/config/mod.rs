@@ -6,6 +6,11 @@ use tokio_modbus::{
 use tokio_serial::SerialStream;
 
 #[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct TcpModbusConnectionData {
+    url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct RtuModbusConnectionData {
     ttys_location: String,
     baud_rate: u32,
@@ -41,7 +46,7 @@ pub(crate) struct ModbusSlave {
 }
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) enum ModbusConnection {
-    TCP(String),
+    TCP(TcpModbusConnectionData),
     RTU(RtuModbusConnectionData),
 }
 
@@ -53,8 +58,8 @@ pub(crate) enum ModbusError {
 impl ModbusSlave {
     pub(crate) async fn connect(&self) -> Result<Context, ModbusError> {
         match &self.modbus_connection {
-            ModbusConnection::TCP(url) => {
-                let socket_addr = url.parse().unwrap();
+            ModbusConnection::TCP(config) => {
+                let socket_addr = config.url.parse().unwrap();
                 let slave = Slave(1);
                 tcp::connect_slave(socket_addr, slave)
                     .await

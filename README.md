@@ -20,8 +20,19 @@ needs (most importantly, inexpensive hardware).
 What you basically need
 
  * a raspberry pi or Mango PI
- * a smart meter that its compatible with this software (if it is not, file an issue)
- * HS-100 smart plugs (or suitable opto-isolators)
+ * a smart meter that its compatible with this software (if it is not, file an issue) plus
+   an IR reader
+ * compatible actors (if you have an Rest, GPIO or Modbus Capable actor that is not supported file an issue)
+   * Producers
+     * Ahoy DTU
+     * OpenDTU
+     * Marstek Venus E (Discharging)
+     * ApSystems EZ1-m
+   * Consumers
+     * TP-Link HS100
+     * Tasmota
+     * Joy-IT RD6006
+     * Marstek Venus E (Charging)  
  * a micro solar power plant
 
 The technical principle is easy: if you produce more energy than your house needs, your 
@@ -84,7 +95,8 @@ I assume that you have a Mango PI Pro-Q.
 ## Setup actors
 
  * see sample yaml config
- * put your HS100/HS110 smart plugs into the list
+   * for [actor configuration](./server/config-sample-sml.yaml)
+   * for [a smart meter with modbus connection](./server/config-sample-modbus.yaml)
 
 # Deploy
 

@@ -1,0 +1,21 @@
+actors:
+  producers: []
+  consumers: []
+
+ 
+power_measurement:
+    !GenericModbusSlave
+    register: 1
+    poll_intervall_millis: 1000      
+    modbus_slave: 
+      slave_adress: 1
+      modbus_connection:
+        !RTU
+        ttys_location: /dev/ttyUSB0
+        baud_rate: 1200
+        stop_bits: !One
+        parity: !Even
+        flow_control: !Software
+log_location: /root/energy.log
+lower_limit: -5
+upper_limit: 25

@@ -1,0 +1,92 @@
+actors:
+  producers:
+    - !Regulating
+      actor: !MarstekDischarge
+        modbus_slave: 
+          slave_adress: 1
+          modbus_connection:
+            !TCP
+            url: "http://192.168.178.54:8050/"
+        upper_limit_watts: 1000
+      time_until_effective_seconds: 3
+      max_power: 2000
+    - !Regulating
+      actor: !MarstekDischarge
+        modbus_slave: 
+          slave_adress: 1
+          modbus_connection:
+            !RTU
+            ttys_location: /dev/ttyUSB0
+            baud_rate: 1200
+            stop_bits: !One
+            parity: !Even
+            flow_control: !Software
+        upper_limit_watts: 1000
+      time_until_effective_seconds: 3
+      max_power: 2000      
+    - !Regulating
+      actor: !EZ1M
+        url: "http://192.168.178.54:8050/"
+        upper_limit_watts: 100
+      time_until_effective_seconds: 5
+      max_power: 100
+    - !Regulating
+      actor: !OpenDtu
+        url: "http://opendtu-590bc0/"
+        upper_limit_watts: 100
+        password: "openDTU42"
+        serial: "112182061267"
+        max_power: 100
+      time_until_effective_seconds: 5
+      max_power: 100
+    - !Regulating
+      actor: !Ahoy
+        url: "http://ahoy-dtu/"
+        upper_limit_watts: 100
+        password: "openDTU42"
+        inverter_no: 1
+        max_power: 100
+      time_until_effective_seconds: 5
+      max_power: 100      
+  consumers:
+    - !Switching
+      actor: !Tasmota
+        url: http://192.168.178.53
+      time_until_effective_seconds: 20
+      power: 200
+    - !Switching
+      actor: !HS100
+        address: 192.168.178.71:9999
+      actor_mode: !Charge
+      time_until_effective_seconds: 20
+      power: 250
+    - !Regulating
+      actor: !MarstekCharge
+        modbus_slave: 
+          slave_adress: 1
+          modbus_connection:
+            !TCP
+            url: "http://192.168.178.54:8050/"
+        upper_limit_watts: 1000
+      time_until_effective_seconds: 3
+      max_power: 2000      
+    - !Regulating
+      actor: !RD6006
+        modbus_slave: 
+          slave_adress: 1
+          modbus_connection:
+            !TCP
+            url: "http://192.168.178.54:8050/"
+        final_voltage_hundredth_volts: 316
+        upper_limit_watts: 150
+      time_until_effective_seconds: 3
+      max_power: 2000    
+ 
+power_measurement:
+    !SmlSmartMeter
+    ttys_location: /dev/ttyS2
+    gpio_location: /dev/gpiochip0
+    gpio_power_pin: 227
+log_location: /root/energy.log
+lower_limit: -5
+upper_limit: 25

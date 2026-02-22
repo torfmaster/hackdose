@@ -115,8 +115,19 @@ async fn main() {
 mod test {
     use super::*;
     #[tokio::test]
-    pub async fn deserializes_sample_config() {
-        let config = File::open("config-sample.yaml").await.unwrap();
+    pub async fn deserializes_sml_sample_config() {
+        let config = File::open("config-sample-sml.yaml").await.unwrap();
+        let mut config_file = String::new();
+        BufReader::new(config)
+            .read_to_string(&mut config_file)
+            .await
+            .unwrap();
+        serde_yaml::from_str::<Configuration>(&config_file).unwrap();
+    }
+
+    #[tokio::test]
+    pub async fn deserializes_modbus_sample_config() {
+        let config = File::open("config-sample-modbus.yaml").await.unwrap();
         let mut config_file = String::new();
         BufReader::new(config)
             .read_to_string(&mut config_file)
