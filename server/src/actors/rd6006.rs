@@ -3,7 +3,12 @@ use std::cmp::{max, min};
 use serde::{Deserialize, Serialize};
 use tokio::task;
 
-use crate::{actors::Regulator, config::ModbusSlave};
+use crate::{
+    actors::{
+        ActorState, ActorStateType, RegulatingActorConfiguration, RegulatingActorState, Regulator,
+    },
+    config::ModbusSlave,
+};
 use tokio_modbus::{client::Context, prelude::*};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -16,6 +21,27 @@ pub(crate) struct RD6006Config {
 pub(crate) struct RD6006 {
     pub(crate) rd6006_config: RD6006Config,
     pub(crate) current_watts: usize,
+}
+
+impl RD6006Config {
+    pub(crate) fn into_actor_state(
+        &self,
+        regulating_actor_configuration: &RegulatingActorConfiguration,
+    ) -> ActorState {
+        let regulator = Box::new(RD6006 {
+            rd6006_config: self.clone(),
+            current_watts: 0,
+        });
+        ActorState {
+            wait_until: None,
+            time_until_effective_seconds: regulating_actor_configuration
+                .time_until_effective_seconds,
+            special_state: ActorStateType::Regulating(RegulatingActorState {
+                regulator: regulator,
+                max_power: regulating_actor_configuration.max_power,
+            }),
+        }
+    }
 }
 
 #[async_trait::async_trait]

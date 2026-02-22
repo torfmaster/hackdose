@@ -101,7 +101,7 @@ pub(crate) struct MarstekConfiguration {
     pub(crate) upper_limit_watts: usize,
 }
 
-struct ActorState {
+pub(crate) struct ActorState {
     wait_until: Option<DateTime<Utc>>,
     time_until_effective_seconds: usize,
     special_state: ActorStateType,
@@ -359,19 +359,7 @@ impl ActorState {
                         }
                     }
                     RegulatingActorType::RD6006(rd6006_config) => {
-                        let regulator = Box::new(RD6006 {
-                            rd6006_config: rd6006_config.clone(),
-                            current_watts: 0,
-                        });
-                        ActorState {
-                            wait_until: None,
-                            time_until_effective_seconds: regulating_actor_configuration
-                                .time_until_effective_seconds,
-                            special_state: ActorStateType::Regulating(RegulatingActorState {
-                                regulator: regulator,
-                                max_power: regulating_actor_configuration.max_power,
-                            }),
-                        }
+                        rd6006_config.into_actor_state(regulating_actor_configuration)
                     }
                 }
             }
