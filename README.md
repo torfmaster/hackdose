@@ -98,6 +98,27 @@ I assume that you have a Mango PI Pro-Q.
    * for [actor configuration](./server/config-sample-sml.yaml)
    * for [a smart meter with modbus connection](./server/config-sample-modbus.yaml)
 
+## Stabilizing device names
+
+It is the recommended way to connect devices via USB. However, this usually
+leads to non-deterministic distribution of device names (e.g. `/dev/ttyUSB0`).
+This can be fixed simply by creating symlinks for the devices based on the
+serial numbers.
+
+A file `10.hackdose.rules` might contain the following entries:
+```
+SUBSYSTEMS=="usb", ATTRS{serial}=="5432", KERNEL=="ttyUSB*", SYMLINK+="smartmeter"
+SUBSYSTEMS=="usb", ATTRS{serial}=="1234", KERNEL=="ttyUSB*", SYMLINK+="marstek"
+```
+
+You can find the serial number of your device (assumed to be named `ttyUSB0`)
+udevadm info -a -p $(udevadm info -q path -n /dev/ttyUSB0)
+using the somewhat clunky command:
+
+```bash
+udevadm info -a -p $(udevadm info -q path -n /dev/ttyUSB0)
+```
+
 # Deploy
 
 You can use the deploy script `install.sh` to deploy. 
