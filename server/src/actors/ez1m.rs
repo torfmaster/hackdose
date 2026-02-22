@@ -84,25 +84,3 @@ impl EZ1M {
         task::spawn(client.get(url).query(&[("status", 0)]).send());
     }
 }
-
-mod test {
-    use std::time::Duration;
-
-    use reqwest::Url;
-
-    // #[tokio::test]
-    pub async fn lae() {
-        let power = 33;
-        let url = "http://192.168.178.54:8050/".to_string();
-
-        let mut url = Url::parse(&url).unwrap();
-        url.set_path("/setMaxPower");
-
-        let client_builder = reqwest::ClientBuilder::new();
-        let client_builder = client_builder.connect_timeout(Duration::from_secs(5));
-        let client = client_builder.build().unwrap();
-
-        let n = client.get(url).query(&[("p", 31)]).send().await;
-        dbg!(n);
-    }
-}
