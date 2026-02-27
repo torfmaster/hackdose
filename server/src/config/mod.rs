@@ -29,6 +29,7 @@ pub(crate) enum StopBits {
 pub(crate) enum Parity {
     Even,
     Odd,
+    None,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -75,6 +76,7 @@ impl ModbusSlave {
                 let parity = match &config.parity {
                     Parity::Even => tokio_serial::Parity::Even,
                     Parity::Odd => tokio_serial::Parity::Odd,
+                    Parity::None => tokio_serial::Parity::None,
                 };
 
                 let flow_control = match &config.flow_control {
