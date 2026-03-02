@@ -332,14 +332,29 @@ impl ActorState {
 enum SystemState {
     AllOff,
     Producing,
-    Consuming,
+    Consuming(usize),
 }
 
 fn compute_system_state(producers: &[ActorState], consumers: &[ActorState]) -> SystemState {
     if producers.iter().any(|p| p.is_active()) {
         SystemState::Producing
     } else if consumers.iter().any(|p| p.is_active()) {
-        SystemState::Consuming
+        let total_power = consumers
+            .iter()
+            .map(|c| match &c.special_state {
+                ActorStateType::Switching(switching_actor_state) => {
+                    if switching_actor_state.on {
+                        switching_actor_state.power
+                    } else {
+                        0
+                    }
+                }
+                ActorStateType::Regulating(regulating_actor_state) => {
+                    regulating_actor_state.regulator.power()
+                }
+            })
+            .sum();
+        SystemState::Consuming(total_power)
     } else {
         SystemState::AllOff
     }
@@ -435,7 +450,7 @@ pub(crate) async fn control_actors(
                     }
                 }
             }
-            SystemState::Consuming => {
+            SystemState::Consuming(power_consumption) => {
                 if received > config.upper_limit {
                     let mut difference_left = received - margin;
                     for consumer in consumers.iter_mut().rev() {
@@ -452,13 +467,26 @@ pub(crate) async fn control_actors(
                 if received < config.lower_limit {
                     let mut difference_left = -(received - margin) as isize;
                     for consumer in consumers.iter_mut() {
-                        if difference_left <= 0 {
-                            break;
-                        }
+                        if let ActorStateType::Switching(SwitchingActorState {
+                            switch,
+                            on,
+                            power,
+                        }) = &mut consumer.special_state
+                        {
+                            if *power <= power_consumption && !*on {
+                                switch.on().await;
+                                *on = true;
+                                break;
+                            }
+                        } else {
+                            if difference_left <= 0 {
+                                break;
+                            }
 
-                        let actual_effect =
-                            consumer.increase_effect_by(difference_left).await as isize;
-                        difference_left -= actual_effect;
+                            let actual_effect =
+                                consumer.increase_effect_by(difference_left).await as isize;
+                            difference_left -= actual_effect;
+                        }
                     }
                 }
             }
