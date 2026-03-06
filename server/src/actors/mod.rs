@@ -467,17 +467,28 @@ pub(crate) async fn control_actors(
                 if received < config.lower_limit {
                     let mut difference_left = -(received - margin) as isize;
                     for consumer in consumers.iter_mut() {
-                        if let ActorStateType::Switching(SwitchingActorState {
-                            switch,
-                            on,
-                            power,
-                        }) = &mut consumer.special_state
-                        {
-                            if *power <= power_consumption && !*on {
-                                switch.on().await;
-                                *on = true;
-                                break;
+                        let is_switching = match &consumer.special_state {
+                            ActorStateType::Switching(_) => true,
+                            ActorStateType::Regulating(_) => false,
+                        };
+                        if is_switching {
+                            match &mut consumer.special_state {
+                                ActorStateType::Switching(SwitchingActorState {
+                                    switch,
+                                    on,
+                                    power,
+                                }) => {
+                                    if *power <= power_consumption && !*on {
+                                        switch.on().await;
+                                        *on = true;
+                                        break;
+                                    }
+                                }
+                                ActorStateType::Regulating(_) => {
+                                    unreachable!()
+                                }
                             }
+                            consumer.set_busy();
                         } else {
                             if difference_left <= 0 {
                                 break;
