@@ -22,29 +22,31 @@ pub(crate) fn spawn_modbus_producer(
 
     tokio::spawn(async move {
         loop {
-            let mut ctx = con.modbus_slave.connect().await.unwrap();
             loop {
-                let v = timeout(
-                    Duration::from_secs(5),
-                    ctx.read_holding_registers(con.register, 1),
-                )
-                .await;
-                if let Ok(Ok(Ok(v))) = v {
-                    match v.first() {
-                        Some(v) => {
-                            let date = Utc::now();
-                            let v = (*v as i16) as i32;
-                            let data = DataPoint { date, value: v };
-                            energy_data.put(data).await;
-                            energy_data.log_data(data).await;
-                            let _ = cloned_tx.send((v, date)).await;
+                let ctx = con.modbus_slave.connect().await;
+                if let Ok(mut ctx) = ctx {
+                    let v = timeout(
+                        Duration::from_secs(5),
+                        ctx.read_holding_registers(con.register, 1),
+                    )
+                    .await;
+                    if let Ok(Ok(Ok(v))) = v {
+                        match v.first() {
+                            Some(v) => {
+                                let date = Utc::now();
+                                let v = (*v as i16) as i32;
+                                let data = DataPoint { date, value: v };
+                                energy_data.put(data).await;
+                                energy_data.log_data(data).await;
+                                let _ = cloned_tx.send((v, date)).await;
+                            }
+                            None => (),
                         }
-                        None => (),
+                    } else {
+                        break;
                     }
-                } else {
-                    break;
+                    sleep(Duration::from_millis(con.poll_intervall_millis as u64)).await;
                 }
-                sleep(Duration::from_millis(con.poll_intervall_millis as u64)).await;
             }
         }
     });

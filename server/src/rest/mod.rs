@@ -7,6 +7,7 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use chrono::format::format;
 use hackdose_server_shared::{DataPoint, Range};
 use hackdose_sml_parser::application::{domain::AnyValue, obis::Obis};
 use mime_guess::mime;
@@ -80,7 +81,10 @@ pub(crate) async fn serve_rest_endpoint(
     energy_data: EnergyData,
     config: &Configuration,
 ) {
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    let listener =
+        tokio::net::TcpListener::bind(format!("0.0.0.0:{}", config.port.unwrap_or(8080)))
+            .await
+            .unwrap();
     let app_state = AppState {
         energy_data: energy_data,
         smart_meter_state: SmartMeterState(mutex),

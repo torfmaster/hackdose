@@ -36,6 +36,7 @@ pub(crate) struct Configuration {
     power_measurement: PowerMeasurement,
     lower_limit: isize,
     upper_limit: isize,
+    port: Option<usize>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

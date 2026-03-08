@@ -10,9 +10,11 @@ mod marstek_registers {
     pub(super) const STATE: u16 = 0xa41a;
     pub(super) const FORCIBLE_CHARGE_WATTS: u16 = 0xa424;
     pub(super) const FORCIBLE_DISCHARGE_WATTS: u16 = 0xa425;
+    pub(super) const RS485_CONTROL_MODE: u16 = 0xA410;
 
     pub(super) const STATE_CHARGE: u16 = 1;
     pub(super) const STATE_DISCHARGE: u16 = 2;
+    pub(super) const RS485_ENABLED: u16 = 0x55aa;
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -48,6 +50,12 @@ impl Regulator for MarstekCharge {
 
         task::spawn(async move {
             let mut ctx = slave.connect().await.unwrap();
+            let _ = ctx
+                .write_single_register(
+                    marstek_registers::RS485_CONTROL_MODE,
+                    marstek_registers::RS485_ENABLED,
+                )
+                .await;
             let _ = ctx
                 .write_single_register(marstek_registers::STATE, marstek_registers::STATE_CHARGE)
                 .await;

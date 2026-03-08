@@ -1,0 +1,10 @@
+[Unit]
+Description=Hackdose2
+
+[Service]
+ExecStart=/usr/bin/hackdose-server2 --config /etc/hackdose2.yaml
+Restart=on-failure
+EnvironmentFile=/etc/environment
+
+[Install]
+WantedBy=multi-user.target
